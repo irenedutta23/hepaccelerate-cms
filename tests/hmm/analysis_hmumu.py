@@ -30,16 +30,17 @@ def parse_args():
     parser.add_argument('--datapath', '-p', action='store', help='Prefix to load NanoAOD data from', default="/nvmedata")
     parser.add_argument('--maxfiles', '-m', action='store', help='Maximum number of files to process', default=-1, type=int)
     parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously', default=1, type=int)
-    parser.add_argument('--cache-location', action='store', help='Cache location', default='', type=str)
+    parser.add_argument('--cache-location', action='store', help='Cache location', default='./mycache', type=str)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
     parser.add_argument('--niter', action='store', help='Number of categorization optimization iterations', default=1, type=int)
     parser.add_argument('--pinned', action='store_true', help='Use CUDA pinned memory')
     parser.add_argument('--filter-datasets', action='store', help='Glob pattern to select datasets', default="*")
+    parser.add_argument('--do-sync', action='store_true', help='Run synchronization datasets')
     args = parser.parse_args()
     return args
 
 #dataset nickname, filename glob pattern, isMC
-datasets = [
+datasets_2017 = [
     ("data_2017", "/store/data/Run2017*/SingleMuon/NANOAOD/Nano14Dec2018-v1/**/*.root", False),
 #    ("data_2018", "/store/data/Run2018*/SingleMuon/NANOAOD/Nano14Dec2018_ver2-v1/**/*.root", False),
     ("ggh", "/store/mc/RunIIFall17NanoAODv4/GluGluHToMuMu_M125_13TeV_amcatnloFXFX_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
@@ -57,6 +58,10 @@ datasets = [
     ("wz_2l2q", "/store/mc/RunIIFall17NanoAODv4/WZTo2L2Q_13TeV_amcatnloFXFX_madspin_pythia8/**/*.root", True),
     ("wz_1l1nu2q", "/store/mc/RunIIFall17NanoAODv4/WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8/**/*.root", True),
     ("zz", "/store/mc/RunIIFall17NanoAODv4/ZZTo2L2Nu_13TeV_powheg_pythia8/**/*.root", True),
+]
+
+datasets_sync = [
+    ("ggh", "data/ggh_nano_2016.root", True)
 ]
 
 cross_sections = {
@@ -157,7 +162,11 @@ if __name__ == "__main__":
         cupy.cuda.set_allocator(None)
         cupy.cuda.set_pinned_memory_allocator(None)
 
-    datasets = [ds for ds in datasets if shutil.fnmatch.fnmatch(ds[0], args.filter_datasets)]
+    datasets = datasets_2017
+    if args.do_sync:
+        datasets = datasets_sync
+
+    datasets = [ds for ds in datasets_sync if shutil.fnmatch.fnmatch(ds[0], args.filter_datasets)]
     print("selected datasets {0} based on pattern {1}".format([ds[0] for ds in datasets], args.filter_datasets))
     hmumu_utils.NUMPY_LIB, hmumu_utils.ha = choose_backend(args.use_cuda)
     Dataset.numpy_lib = hmumu_utils.NUMPY_LIB
@@ -209,11 +218,15 @@ if __name__ == "__main__":
 
     analysis_parameters = {
         "baseline": {
-            "NdfPV": 4,
-            "zPV": 24,
+            "NdfPV": 0,
+            "zPV": 99999,
+
+            # "NdfPV": 4,
+            # "zPV": 24,
+
             "nPV": 0,
             "muon_pt": 20,
-            "muon_pt_leading": 30,
+            "muon_pt_leading": 26,
             "muon_eta": 2.4,
             "muon_iso": 0.25,
             "muon_id": "medium",
@@ -224,11 +237,11 @@ if __name__ == "__main__":
             
             "do_jec": True, 
             "jet_mu_dr": 0.4,
-            "jet_pt": 30.0,
+            "jet_pt": 25.0,
             "jet_eta": 4.7,
             "jet_id": "tight",
             "jet_puid": "loose",
-            "jet_btag": 0.4941,
+            "jet_btag": 0.6321,
 
             "inv_mass_bins": 41,
 
@@ -283,10 +296,10 @@ if __name__ == "__main__":
     pu_corrections_2017 = load_puhist_target("data/RunII_2017_data.root")
     
     libhmm = LibHMuMu()
-    rochester_corr = RochesterCorrections(libhmm, "data/RoccoR2017v1.txt")
-    lepsf_iso = LeptonEfficiencyCorrections(libhmm, "data/leptonSF/RunBCDEF_SF_ISO.root", "NUM_LooseRelIso_DEN_MediumID_pt_abseta")
-    lepsf_id = LeptonEfficiencyCorrections(libhmm, "data/leptonSF/RunBCDEF_SF_ID.root", "NUM_MediumID_DEN_genTracks_pt_abseta")
-    lepsf_trig = LeptonEfficiencyCorrections(libhmm, "data/leptonSF/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root", "IsoMu27_PtEtaBins/pt_abseta_ratio")
+    rochester_corr = RochesterCorrections(libhmm, "data/RoccoR2016.txt")
+    lepsf_iso = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/RunBCDEF_SF_ISO.root"], ["NUM_LooseRelIso_DEN_MediumID_pt_abseta"], [1.0])
+    lepsf_id = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/RunBCDEF_SF_ID.root"], ["NUM_MediumID_DEN_genTracks_pt_abseta"], [1.0])
+    lepsf_trig = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root"], ["IsoMu27_PtEtaBins/pt_abseta_ratio"], [1.0])
     jetmet_corrections = JetMetCorrections()
 
     #Run baseline analysis

@@ -33,6 +33,9 @@ ha = None
 NUMPY_LIB = None
 genweight_scalefactor = 0.00001
 
+debug = False
+debug_event_ids = []
+
 try:
     import nvidia_smi
 except Exception as e:
@@ -67,6 +70,7 @@ def get_histogram(data, weights, bins):
     return Histogram(*ha.histogram_from_vector(data, weights, bins))
 
 def get_selected_muons(
+    scalars,
     muons, trigobj, mask_events,
     mu_pt_cut_leading, mu_pt_cut_subleading,
     mu_aeta_cut, mu_iso_cut, muon_id_type,
@@ -111,6 +115,9 @@ def get_selected_muons(
         muons, muons_passing_id & passes_leading_pt, trigobj,
         mask_trigger_objects_mu, muon_trig_match_dr
     ))
+    muons.attrs_data["triggermatch"] = muons_matched_to_trigobj
+    muons.attrs_data["pass_id"] = muons_passing_id
+    muons.attrs_data["passes_leading_pt"] = passes_leading_pt
 
     #At least one muon must be matched to trigger object, find such events
     events_passes_triggermatch = ha.sum_in_offsets(
@@ -145,9 +152,20 @@ def get_selected_muons(
         muons, muons_passing_os, mask_events,
         muons.masks["all"], NUMPY_LIB.int32) == 2
 
+    muons.attrs_data["pass_os"] = muons_passing_os
     final_event_sel = base_event_sel & events_passes_os
     final_muon_sel = muons_passing_id & passes_subleading_pt & muons_passing_os
     additional_muon_sel = muons_passing_id & passes_subleading_pt & NUMPY_LIB.invert(muons_passing_os)
+    muons.masks["iso_id_aeta"] = passes_iso & passes_id & passes_aeta
+
+    if debug:
+        for evtid in debug_event_ids:
+            idx = np.where(scalars["event"] == evtid)[0][0]
+            print("muons")
+            jaggedstruct_print(muons, idx,
+                ["pt", "eta", "phi", "charge", "pfRelIso04_all", "mediumId",
+                "isGlobal", "isTracker", 
+                "triggermatch", "pass_id", "passes_leading_pt"])
 
     return {
         "selected_events": final_event_sel,
@@ -164,6 +182,7 @@ def get_bit_values(array, bit_index):
     return (array & 2**(bit_index)) >> 1
 
 def get_selected_jets(
+    scalars,
     jets, muons,
     mask_muons,
     mask_events,
@@ -207,7 +226,7 @@ def get_selected_jets(
         (NUMPY_LIB.abs(jets.eta) < jet_eta_cut) & pass_jetid & pass_jet_puid)
     jets_pass_dr = ha.mask_deltar_first(
         jets, selected_jets, muons,
-        muons.masks["all"], jet_dr_cut)
+        muons.masks["iso_id_aeta"], jet_dr_cut)
 
     jets.masks["pass_dr"] = jets_pass_dr
     selected_jets = selected_jets & jets_pass_dr
@@ -219,9 +238,11 @@ def get_selected_jets(
     ha.set_in_offsets(first_two_jets, jets.offsets, inds, targets, mask_events, selected_jets)
     inds[:] = 1
     ha.set_in_offsets(first_two_jets, jets.offsets, inds, targets, mask_events, selected_jets)
+    jets.attrs_data["pass_dr"] = jets_pass_dr
+    jets.attrs_data["selected"] = selected_jets
+    jets.attrs_data["first_two"] = first_two_jets
 
     dijet_inv_mass = compute_inv_mass(jets, mask_events, selected_jets & first_two_jets)
-
     
     selected_jets_btag = selected_jets & (jets.btagDeepB >= jet_btag)
 
@@ -230,7 +251,16 @@ def get_selected_jets(
 
     num_jets_btag = ha.sum_in_offsets(jets, selected_jets_btag, mask_events,
         jets.masks["all"], NUMPY_LIB.int8)
-        
+
+    if debug:
+        for evtid in debug_event_ids:
+            idx = np.where(scalars["event"] == evtid)[0][0]
+            print("jets")
+            jaggedstruct_print(jets, idx,
+                ["pt", "eta", "phi", "mass", "jetId", "puId",
+                "pass_dr", "selected", 
+                "first_two"])
+
     return {
         "selected_jets": selected_jets,
         "num_jets": num_jets,
@@ -348,9 +378,7 @@ def compute_pu_weights(pu_corrections_target, weights, mc_nvtx, reco_nvtx):
     return pu_weights, pu_weights_up, pu_weights_down
 
 def select_events_trigger(scalars, parameters, mask_events):
-
     flags = [
-        #"Flag_BadChargedCandidateFilter",
         "Flag_BadPFMuonFilter",
         "Flag_EcalDeadCellTriggerPrimitiveFilter",
         "Flag_HBHENoiseFilter",
@@ -366,7 +394,9 @@ def select_events_trigger(scalars, parameters, mask_events):
     pvsel = pvsel & (scalars["PV_ndof"] > parameters["NdfPV"])
     pvsel = pvsel & (scalars["PV_z"] < parameters["zPV"])
 
-    mask_events = mask_events & scalars["HLT_IsoMu27"] & pvsel
+    trig_decision = (scalars["HLT_IsoMu24"] + scalars["HLT_IsoTkMu24"]) >= 1
+    mask_events = mask_events & trig_decision & pvsel
+    return mask_events
 
 def get_int_lumi(runs, lumis, mask_events, lumidata):
     processed_runs = NUMPY_LIB.asnumpy(runs[mask_events])
@@ -388,60 +418,59 @@ def get_gen_sumweights(filenames):
     return sumw
 
 """
-Applies rocheter corrections on leading and subleading muons, returns the corrected pt
+Applies Rochester corrections on leading and subleading muons, returns the corrected pt
 
     is_mc: bool
     rochester_corrections: RochesterCorrections object that contains calibration data
-    leading_muon: dict of str -> array of the leading muon properties
-    subleading_muon: dict of str -> array of the subleading muon properties
+    muons: JaggedStruct of all muon data
 
-    returns: arrays of leading and subleading muon corrected pt
+    returns: nothing
 
 """
 def do_rochester_corrections(
     is_mc,
     rochester_corrections,
-    leading_muon,
-    subleading_muon):
+    muons):
 
+    qterm = rochester_correction_muon_qterm(
+        is_mc, rochester_corrections, muons)
     
-    qterm_leading = rochester_correction_muon_qterm(
-        is_mc, rochester_corrections, leading_muon)
-    qterm_subleading = rochester_correction_muon_qterm(
-        is_mc, rochester_corrections, subleading_muon)
-    
-    leading_muon_pt = leading_muon["pt"] * qterm_leading
-    subleading_muon_pt = subleading_muon["pt"] * qterm_subleading
+    muon_pt_corr = muons.pt * qterm
+    muons.pt[:] = muon_pt_corr[:]
 
-    return leading_muon_pt, subleading_muon_pt
+    return
 
 """
 Computes the Rochester correction q-term for an array of muons.
 
     is_mc: bool
     rochester_corrections: RochesterCorrections object that contains calibration data
-    muon_props: dict of str -> array of the muon properties
+    muons: JaggedStruct of all muon data
 
     returns: array of the computed q-term values
 """
 def rochester_correction_muon_qterm(
     is_mc, rochester_corrections,
-    muon_props):
+    muons):
     if is_mc:
-        rnd = NUMPY_LIB.random.rand(len(muon_props["pt"])).astype(NUMPY_LIB.float32)
+        rnd = 0.0 * NUMPY_LIB.random.rand(len(muons.pt)).astype(NUMPY_LIB.float32)
+        rnd[:] = 0.1
         qterm = rochester_corrections.compute_kSpreadMC_or_kSmearMC(
-            NUMPY_LIB.asnumpy(muon_props["pt"]),
-            NUMPY_LIB.asnumpy(muon_props["eta"]),
-            NUMPY_LIB.asnumpy(muon_props["phi"]),
-            NUMPY_LIB.asnumpy(muon_props["genpt"]),
-            NUMPY_LIB.asnumpy(muon_props["nTrackerLayers"]),
+            NUMPY_LIB.asnumpy(muons.pt),
+            NUMPY_LIB.asnumpy(muons.eta),
+            NUMPY_LIB.asnumpy(muons.phi),
+            NUMPY_LIB.asnumpy(muons.charge),
+            NUMPY_LIB.asnumpy(muons.genpt),
+            NUMPY_LIB.asnumpy(muons.nTrackerLayers),
             NUMPY_LIB.asnumpy(rnd)
         )
     else:
         qterm = rochester_corrections.compute_kScaleDT(
-            NUMPY_LIB.asnumpy(muon_props["pt"]),
-            NUMPY_LIB.asnumpy(muon_props["eta"]),
-            NUMPY_LIB.asnumpy(muon_props["phi"]))
+            NUMPY_LIB.asnumpy(muons.pt),
+            NUMPY_LIB.asnumpy(muons.eta),
+            NUMPY_LIB.asnumpy(muons.phi),
+            NUMPY_LIB.asnumpy(muons.charge),
+        )
 
     return NUMPY_LIB.array(qterm)
 
@@ -772,6 +801,7 @@ def fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass, leading_muon, sub
 
 def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepsf_trig, use_cuda, NUMPY_LIB):
     sfs = []
+
     for mu in [leading_muon, subleading_muon]: 
         if use_cuda:
             mu = {k: NUMPY_LIB.asnumpy(v) for k, v in mu.items()}
@@ -791,6 +821,22 @@ def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepsf_
 
     return sf_tot
 
+def jaggedstruct_print(struct, idx, attrs):
+    of1 = struct.offsets[idx]
+    of2 = struct.offsets[idx+1]
+    print("nstruct", of2-of1)
+    for i in range(of1, of2):
+        print("s", [getattr(struct, a)[i] for a in attrs])
+
+def deepdive_event(scalars, mask_events, ret_mu, jets, muons, id):
+    print("deepdive")
+    idx = np.where(scalars["event"]==id)[0][0]
+    print("scalars:", {k: v[idx] for k, v in scalars.items()})
+    print("trigger:", mask_events[idx])
+    print("muon:", ret_mu["selected_events"][idx])
+    jaggedstruct_print(jets, idx, ["pt", "eta"])
+    jaggedstruct_print(muons, idx, ["pt", "eta", "mediumId", "pfRelIso04_all", "charge", "triggermatch", "passes_leading_pt", "pass_id", "pass_os"])
+
 def analyze_data(
     data,
     use_cuda=False,
@@ -807,7 +853,8 @@ def analyze_data(
     parameters={},
     parameter_set_name="",
     doverify=False,
-    debug=False
+    debug=False,
+    do_sync = False
     ):
 
     muons = data["Muon"]
@@ -839,7 +886,7 @@ def analyze_data(
 
     #Get the mask of events that pass trigger selection
     mask_events = NUMPY_LIB.ones(muons.numevents(), dtype=NUMPY_LIB.bool)
-    select_events_trigger(scalars, parameters, mask_events)
+    mask_events = select_events_trigger(scalars, parameters, mask_events)
 
     #Compute event weights
     weights = {}
@@ -854,8 +901,19 @@ def analyze_data(
         weights["puWeight_down"] = weights["nominal"] * pu_weights_down
         weights["nominal"] = weights["nominal"] * pu_weights
 
+    #Apply Rochester corrections to leading and subleading muon momenta
+    if parameters["do_rochester_corrections"]:
+        print("Before applying Rochester corrections: muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
+        do_rochester_corrections(
+            is_mc,
+            rochester_corrections,
+            muons)
+        print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
+
+
     #get the two leading muons after applying all muon selection
     ret_mu = get_selected_muons(
+        scalars,
         muons, trigobj, mask_events,
         parameters["muon_pt_leading"], parameters["muon_pt"],
         parameters["muon_eta"], parameters["muon_iso"],
@@ -890,16 +948,6 @@ def analyze_data(
         assert(NUMPY_LIB.all(leading_muon["pt"][leading_muon["pt"]>0] > parameters["muon_pt_leading"]))
         assert(NUMPY_LIB.all(subleading_muon["pt"][subleading_muon["pt"]>0] > parameters["muon_pt"]))
 
-    #Apply Rochester corrections to leading and subleading muon momenta
-    if parameters["do_rochester_corrections"]:
-        leading_muon_pt, subleading_muon_pt = do_rochester_corrections(
-            is_mc,
-            rochester_corrections,
-            leading_muon,
-            subleading_muon)
-        leading_muon["pt"][:] = leading_muon_pt[:]
-        subleading_muon["pt"][:] = subleading_muon_pt[:]
-
     #Compute lepton scale factors
     if parameters["do_lepton_sf"] and is_mc:
         sf_tot = compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepsf_trig, use_cuda, NUMPY_LIB)
@@ -917,7 +965,10 @@ def analyze_data(
 
     # Loop over all jet momentum variations and do analysis that depends on jets
     for jet_syst_name, jet_pt_vec in jet_pt_syst.items():
-
+        
+        if jet_syst_name[0] != "nominal":
+            continue
+        
         # For events where the JEC/JER was variated, fill only the nominal weight
         weights_selected = select_weights(weights, jet_syst_name)
 
@@ -932,6 +983,7 @@ def analyze_data(
 
         #get the passing jets for events that pass muon selection
         ret_jet = get_selected_jets(
+            scalars,
             jets, muons,
             ret_mu["selected_muons"], mask_events,
             parameters["jet_pt"],
@@ -941,6 +993,15 @@ def analyze_data(
             parameters["jet_puid"],
             parameters["jet_btag"]
         )
+        ret_jet["dijet_inv_mass"][ret_jet["num_jets"] < 2] = -1000.0
+
+        if do_sync and jet_syst_name[0] == "nominal":
+            with open("log_sync.txt", "w") as fi:
+                msk = ret_mu["selected_events"]
+                for iev in range(muons.numevents()):
+                    if msk[iev]:
+                        print("{run} {lumi} {event} {mu1_pt:.2f} {mu1_eta:.2f} {mu2_pt:.2f} {mu2_eta:.2f} {dimu:.2f} {njet} {nb}".format(
+                            run=scalars["run"][iev], lumi=scalars["luminosityBlock"][iev], event=scalars["event"][iev], mu1_pt=leading_muon["pt"][iev], mu1_eta=leading_muon["eta"][iev], mu2_pt=subleading_muon["pt"][iev], mu2_eta=subleading_muon["eta"][iev], dimu=inv_mass[iev], njet=ret_jet["num_jets"][iev], nb=ret_jet["num_jets_btag"][iev]), file=fi)
 
         # Get the data for the leading and subleading jets as contiguous vectors
         leading_jet = jets.select_nth(0, ret_mu["selected_events"], ret_jet["selected_jets"], attributes=["pt", "eta", "phi", "mass", "qgl"])
@@ -1127,7 +1188,7 @@ def cache_data_multiproc_worker(args):
 
     #put any preselection here
     processed_size_mb = ds.memsize()/1024.0/1024.0
-    cache_preselection(ds)
+    #cache_preselection(ds)
     processed_size_mb_post = ds.memsize()/1024.0/1024.0
 
     ds.to_cache()
@@ -1326,7 +1387,8 @@ def run_analysis(args, outpath, datasets, parameters,
                     lepsf_trig=lepsf_trig,
                     parameters=parameters,
                     dnn_model=dnn_model,
-                    jetmet_corrections=jetmet_corrections) 
+                    jetmet_corrections=jetmet_corrections,
+                    do_sync = args.do_sync) 
                 rets += [ret]
                 processed_size_mb += memsize
                 nev_total += sum([md["numevents"] for md in ret["cache_metadata"]])
@@ -1400,7 +1462,8 @@ def create_datastructure(is_mc):
             ("Flag_globalSuperTightHalo2016Filter", "bool"),
             ("Flag_BadPFMuonFilter", "bool"),
             ("Flag_BadChargedCandidateFilter", "bool"),
-            ("HLT_IsoMu27", "bool"),
+            ("HLT_IsoMu24", "bool"),
+            ("HLT_IsoTkMu24", "bool"),
             ("run", "uint32"),
             ("luminosityBlock", "uint32"),
             ("event", "uint64"),
