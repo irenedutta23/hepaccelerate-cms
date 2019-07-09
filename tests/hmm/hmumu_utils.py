@@ -155,7 +155,7 @@ def get_selected_muons(
     muons.attrs_data["pass_os"] = muons_passing_os
     final_event_sel = base_event_sel & events_passes_os
     final_muon_sel = muons_passing_id & passes_subleading_pt & muons_passing_os
-    additional_muon_sel = muons_passing_id & passes_subleading_pt & NUMPY_LIB.invert(muons_passing_os)
+    additional_muon_sel = muons_passing_id & NUMPY_LIB.invert(muons_passing_os)
     muons.masks["iso_id_aeta"] = passes_iso & passes_id & passes_aeta
 
     if debug:
@@ -377,7 +377,7 @@ def compute_pu_weights(pu_corrections_target, weights, mc_nvtx, reco_nvtx):
     
     return pu_weights, pu_weights_up, pu_weights_down
 
-def select_events_trigger(scalars, parameters, mask_events):
+def select_events_trigger(scalars, parameters, mask_events, hlt_bits):
     flags = [
         "Flag_BadPFMuonFilter",
         "Flag_EcalDeadCellTriggerPrimitiveFilter",
@@ -394,7 +394,10 @@ def select_events_trigger(scalars, parameters, mask_events):
     pvsel = pvsel & (scalars["PV_ndof"] > parameters["NdfPV"])
     pvsel = pvsel & (scalars["PV_z"] < parameters["zPV"])
 
-    trig_decision = (scalars["HLT_IsoMu24"] + scalars["HLT_IsoTkMu24"]) >= 1
+    trig_decision = scalars[hlt_bits[0]]
+    for hlt_bit in hlt_bits[1:]:
+        trig_decision += scalars[hlt_bit]
+    trig_decision = trig_decision >= 1
     mask_events = mask_events & trig_decision & pvsel
     return mask_events
 
@@ -453,8 +456,7 @@ def rochester_correction_muon_qterm(
     is_mc, rochester_corrections,
     muons):
     if is_mc:
-        rnd = 0.0 * NUMPY_LIB.random.rand(len(muons.pt)).astype(NUMPY_LIB.float32)
-        rnd[:] = 0.1
+        rnd = NUMPY_LIB.random.rand(len(muons.pt)).astype(NUMPY_LIB.float32)
         qterm = rochester_corrections.compute_kSpreadMC_or_kSmearMC(
             NUMPY_LIB.asnumpy(muons.pt),
             NUMPY_LIB.asnumpy(muons.eta),
@@ -837,6 +839,90 @@ def deepdive_event(scalars, mask_events, ret_mu, jets, muons, id):
     jaggedstruct_print(jets, idx, ["pt", "eta"])
     jaggedstruct_print(muons, idx, ["pt", "eta", "mediumId", "pfRelIso04_all", "charge", "triggermatch", "passes_leading_pt", "pass_id", "pass_os"])
 
+def sync_printout(
+    ret_mu, muons, scalars,
+    leading_muon, subleading_muon, inv_mass,
+    n_additional_muons, n_additional_electrons,
+    ret_jet, leading_jet, subleading_jet):
+    with open("log_sync.txt", "w") as fi:
+        msk = ret_mu["selected_events"] & (
+            NUMPY_LIB.logical_or(
+                (inv_mass > 110.0) & (inv_mass < 150.0),
+                (inv_mass > 76.0) & (inv_mass < 106.0)
+            )
+        )
+        for iev in range(muons.numevents()):
+            if msk[iev]:
+                s = ""
+                s += "{0} ".format(scalars["run"][iev])
+                s += "{0} ".format(scalars["luminosityBlock"][iev])
+                s += "{0} ".format(scalars["event"][iev])
+                s += "{0} ".format(ret_jet["num_jets"][iev])
+                s += "{0} ".format(ret_jet["num_jets_btag"][iev])
+                s += "{0} ".format(n_additional_muons[iev])
+                s += "{0} ".format(n_additional_electrons[iev])
+                s += "{0:.2f} ".format(leading_muon["pt"][iev])
+                s += "{0:.2f} ".format(leading_muon["eta"][iev])
+                s += "{0:.2f} ".format(subleading_muon["pt"][iev])
+                s += "{0:.2f} ".format(subleading_muon["eta"][iev])
+                s += "{0:.2f} ".format(inv_mass[iev])
+
+                s += "{0:.2f} ".format(leading_jet["pt"][iev])
+                s += "{0:.2f} ".format(leading_jet["eta"][iev])
+                s += "{0:.2f} ".format(subleading_jet["pt"][iev])
+                s += "{0:.2f} ".format(subleading_jet["eta"][iev])
+
+                s += "{0:.2f} ".format(ret_jet["dijet_inv_mass"][iev])
+
+                #category index
+                s += "{0} ".format(scalars["category"][iev])
+                print(s, file=fi)
+
+def assign_category_nan_irene(njet, nbjet, n_additional_muons, n_additional_electrons, dijet_inv_mass, leading_jet, subleading_jet):
+    cats = NUMPY_LIB.zeros_like(njet)
+    cats[:] = -9999
+
+    msk_prev = NUMPY_LIB.zeros_like(cats, dtype=NUMPY_LIB.bool)
+
+    #cat 1, ttH
+    msk_1 = (nbjet > 0) & NUMPY_LIB.logical_or(n_additional_muons > 0, n_additional_electrons > 0)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_1] = 1
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_1)
+
+    #cat 2
+    msk_2 = (nbjet > 0) & (njet > 1)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_2] = 2
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_2)
+
+    #cat 3
+    msk_3 = (n_additional_muons > 0)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_3] = 3
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_3)
+
+    #cat 4
+    msk_4 = (n_additional_electrons > 0)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_4] = 4
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_4)
+
+    #cat 5
+    msk_5 = (dijet_inv_mass > 400) & (leading_jet["pt"] > 30) & (leading_jet["qgl"] != -1) & (subleading_jet["qgl"] != -1)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_5] = 5
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_5)
+
+    #cat 6
+    msk_6 = (dijet_inv_mass > 70) & (dijet_inv_mass < 100)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_6] = 6
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_6)
+
+    #cat 7
+    msk_7 = (njet > 1)
+    cats[NUMPY_LIB.invert(msk_prev) & msk_7] = 7
+    msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_7)
+
+    cats[NUMPY_LIB.invert(msk_prev)] = 8
+
+    return cats
+
 def analyze_data(
     data,
     use_cuda=False,
@@ -854,7 +940,8 @@ def analyze_data(
     parameter_set_name="",
     doverify=False,
     debug=False,
-    do_sync = False
+    do_sync = False,
+    dataset_era = ""
     ):
 
     muons = data["Muon"]
@@ -886,7 +973,7 @@ def analyze_data(
 
     #Get the mask of events that pass trigger selection
     mask_events = NUMPY_LIB.ones(muons.numevents(), dtype=NUMPY_LIB.bool)
-    mask_events = select_events_trigger(scalars, parameters, mask_events)
+    mask_events = select_events_trigger(scalars, parameters, mask_events, parameters["hlt_bits"][dataset_era])
 
     #Compute event weights
     weights = {}
@@ -895,8 +982,10 @@ def analyze_data(
     if is_mc:
         weights["nominal"] = weights["nominal"] * scalars["genWeight"] * genweight_scalefactor
         pu_weights, pu_weights_up, pu_weights_down = compute_pu_weights(
-            pu_corrections, weights["nominal"],
-            scalars["Pileup_nTrueInt"], scalars["PV_npvsGood"])
+            pu_corrections[dataset_era],
+            weights["nominal"],
+            scalars["Pileup_nTrueInt"],
+            scalars["PV_npvsGood"])
         weights["puWeight_up"] = weights["nominal"] * pu_weights_up
         weights["puWeight_down"] = weights["nominal"] * pu_weights_down
         weights["nominal"] = weights["nominal"] * pu_weights
@@ -906,7 +995,7 @@ def analyze_data(
         print("Before applying Rochester corrections: muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
         do_rochester_corrections(
             is_mc,
-            rochester_corrections,
+            rochester_corrections[dataset_era],
             muons)
         print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
 
@@ -915,7 +1004,7 @@ def analyze_data(
     ret_mu = get_selected_muons(
         scalars,
         muons, trigobj, mask_events,
-        parameters["muon_pt_leading"], parameters["muon_pt"],
+        parameters["muon_pt_leading"][dataset_era], parameters["muon_pt"],
         parameters["muon_eta"], parameters["muon_iso"],
         parameters["muon_id"], parameters["muon_trigger_match_dr"]
     )
@@ -986,26 +1075,33 @@ def analyze_data(
             scalars,
             jets, muons,
             ret_mu["selected_muons"], mask_events,
-            parameters["jet_pt"],
+            parameters["jet_pt"][dataset_era],
             parameters["jet_eta"],
             parameters["jet_mu_dr"],
             parameters["jet_id"],
             parameters["jet_puid"],
-            parameters["jet_btag"]
+            parameters["jet_btag"][dataset_era]
         )
-        ret_jet["dijet_inv_mass"][ret_jet["num_jets"] < 2] = -1000.0
 
-        if do_sync and jet_syst_name[0] == "nominal":
-            with open("log_sync.txt", "w") as fi:
-                msk = ret_mu["selected_events"]
-                for iev in range(muons.numevents()):
-                    if msk[iev]:
-                        print("{run} {lumi} {event} {mu1_pt:.2f} {mu1_eta:.2f} {mu2_pt:.2f} {mu2_eta:.2f} {dimu:.2f} {njet} {nb}".format(
-                            run=scalars["run"][iev], lumi=scalars["luminosityBlock"][iev], event=scalars["event"][iev], mu1_pt=leading_muon["pt"][iev], mu1_eta=leading_muon["eta"][iev], mu2_pt=subleading_muon["pt"][iev], mu2_eta=subleading_muon["eta"][iev], dimu=inv_mass[iev], njet=ret_jet["num_jets"][iev], nb=ret_jet["num_jets_btag"][iev]), file=fi)
+        # Set this default value as in Nan and Irene's code
+        ret_jet["dijet_inv_mass"][ret_jet["num_jets"] < 2] = -1000.0
 
         # Get the data for the leading and subleading jets as contiguous vectors
         leading_jet = jets.select_nth(0, ret_mu["selected_events"], ret_jet["selected_jets"], attributes=["pt", "eta", "phi", "mass", "qgl"])
         subleading_jet = jets.select_nth(1, ret_mu["selected_events"], ret_jet["selected_jets"], attributes=["pt", "eta", "phi", "mass", "qgl"])
+
+        category =  assign_category_nan_irene(
+            ret_jet["num_jets"], ret_jet["num_jets_btag"],
+            n_additional_muons, n_additional_electrons,
+            ret_jet["dijet_inv_mass"], leading_jet, subleading_jet
+        )
+        scalars["category"] = category
+
+        if do_sync and jet_syst_name[0] == "nominal":
+            sync_printout(ret_mu, muons, scalars,
+                leading_muon, subleading_muon, inv_mass,
+                n_additional_muons, n_additional_electrons,
+                ret_jet, leading_jet, subleading_jet)
 
         #Check that there are no jets with a pt lower than the cut in the selected events
         if doverify:
@@ -1080,12 +1176,12 @@ def analyze_data(
     if not is_mc and not (lumimask is None):
         runs = NUMPY_LIB.asnumpy(scalars["run"])
         lumis = NUMPY_LIB.asnumpy(scalars["luminosityBlock"])
-        mask_lumi_golden_json = NUMPY_LIB.array(lumimask(runs, lumis))
+        mask_lumi_golden_json = NUMPY_LIB.array(lumimask[dataset_era](runs, lumis))
         if parameter_set_name == "baseline":
             mask_events = mask_events & mask_lumi_golden_json
             #get integrated luminosity in this file
             if not (lumidata is None):
-                int_lumi = get_int_lumi(runs, lumis, NUMPY_LIB.asnumpy(mask_lumi_golden_json), lumidata)
+                int_lumi = get_int_lumi(runs, lumis, NUMPY_LIB.asnumpy(mask_lumi_golden_json), lumidata[dataset_era])
 
     # Collect results
     ret = Results({
@@ -1188,7 +1284,7 @@ def cache_data_multiproc_worker(args):
 
     #put any preselection here
     processed_size_mb = ds.memsize()/1024.0/1024.0
-    #cache_preselection(ds)
+    cache_preselection(ds)
     processed_size_mb_post = ds.memsize()/1024.0/1024.0
 
     ds.to_cache()
@@ -1199,8 +1295,9 @@ def cache_data_multiproc_worker(args):
     return len(ds), processed_size_mb
 
 class InputGen:
-    def __init__(self, name, paths, is_mc, nthreads, chunksize, cache_location, datapath):
+    def __init__(self, name, era, paths, is_mc, nthreads, chunksize, cache_location, datapath):
         self.name = name
+        self.era = era
         self.paths_chunks = list(chunks(paths, chunksize))
         self.chunk_lock = threading.Lock()
         self.loaded_lock = threading.Lock()
@@ -1226,14 +1323,22 @@ class InputGen:
             self.chunk_lock.release()
             return None
 
-        ds = create_dataset(self.name, self.paths_chunks[self.num_chunk], self.is_mc, self.cache_location, self.datapath, self.is_mc)
+        ds = create_dataset(
+            self.name, self.paths_chunks[self.num_chunk],
+            self.is_mc, self.cache_location, self.datapath, self.is_mc)
+
+        ds.era = self.era
         self.num_chunk += 1
         ds.numpy_lib = numpy
         self.chunk_lock.release()
 
-        #load caches on multiple threads
+        # Load caches on multiple threads
         ds.from_cache(executor=self.executor, verbose=False)
+
+        # Merge data arrays from multiple files into one big array
         ds.merge_inplace()
+
+        # Increment the counter for number of loaded datasets
         with self.loaded_lock:
             self.num_loaded += 1
 
@@ -1265,9 +1370,13 @@ def event_loop(train_batches_queue, use_cuda, **kwargs):
 
     ret = {}
     for parameter_set_name, parameter_set in parameters.items():
-        ret[parameter_set_name] = ds.analyze(analyze_data, use_cuda=use_cuda,
-            parameter_set_name=parameter_set_name,
-            parameters=parameter_set, **kwargs)
+        ret[parameter_set_name] = ds.analyze(
+            analyze_data,
+            use_cuda = use_cuda,
+            parameter_set_name = parameter_set_name,
+            parameters = parameter_set,
+            dataset_era = ds.era,
+            **kwargs)
     ret["num_events"] = len(ds)
 
     train_batches_queue.task_done()
@@ -1333,7 +1442,7 @@ def run_analysis(args, outpath, datasets, parameters,
        filenames_cache = json.load(open(args.cache_location + "/datasets.json", "r"))
  
     processed_size_mb = 0
-    for datasetname, globpattern, is_mc in datasets:
+    for datasetname, era, globpattern, is_mc in datasets:
         filenames_all = filenames_cache[datasetname]
         filenames_all = [args.datapath + "/" + fn for fn in filenames_all]
  
@@ -1351,7 +1460,7 @@ def run_analysis(args, outpath, datasets, parameters,
 
         if "analyze" in args.action:        
 
-            training_set_generator = InputGen(datasetname, list(filenames_all), datastructure, args.nthreads, args.chunksize, args.cache_location, args.datapath)
+            training_set_generator = InputGen(datasetname, era, list(filenames_all), datastructure, args.nthreads, args.chunksize, args.cache_location, args.datapath)
             threadk = thread_killer()
             threadk.set_tokill(False)
             train_batches_queue = Queue(maxsize=20)
@@ -1370,14 +1479,23 @@ def run_analysis(args, outpath, datasets, parameters,
             cache_metadata = []
             #loop over all data, call the analyze function
             while num_processed < len(training_set_generator.paths_chunks):
+
+                # In case we are processing data synchronously, just load the dataset here
+                # and put to queue.
                 if not args.async_data:
                     ds = training_set_generator.nextone()
                     if not ds:
                         break
                     train_batches_queue.put(ds)
+
+                #Progress indicator
                 sys.stdout.write(".");sys.stdout.flush()
+
+                #Process the dataset
                 ret, nev, memsize = event_loop(
-                    train_batches_queue, args.use_cuda, debug=False,
+                    train_batches_queue,
+                    args.use_cuda,
+                    debug=False,
                     verbose=False, is_mc=is_mc, lumimask=lumimask,
                     lumidata=lumidata,
                     pu_corrections=pu_corrections,
@@ -1434,6 +1552,7 @@ def create_datastructure(is_mc):
         "Electron": [
             ("Electron_pt", "float32"), ("Electron_eta", "float32"),
             ("Electron_phi", "float32"), ("Electron_mass", "float32"),
+            ("Electron_pfRelIso03_all", "float32"),
             ("Electron_mvaFall17V1Iso_WP90", "bool"),
         ],
         "Jet": [
@@ -1602,7 +1721,7 @@ def optimize_categories(sig_samples, bkg_samples, varlist, datasets, lumidata, l
         with open('{0}/parameters.pickle'.format(outpath), 'wb') as handle:
             pickle.dump(analysis_parameters, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        run_analysis(args, outpath, datasets, analysis_parameters, lumidata, lumimask, pu_corrections_2017)
+        run_analysis(args, outpath, datasets, analysis_parameters, lumidata, lumimask, pu_corrections)
         cut_trees = sorted(list(analysis_parameters["baseline"]["categorization_trees"].keys()), reverse=True)
         r = load_analysis(sig_samples + bkg_samples, outpath, cross_sections, cut_trees)
         print("computing expected significances")
