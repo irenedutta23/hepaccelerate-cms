@@ -992,12 +992,12 @@ def analyze_data(
 
     #Apply Rochester corrections to leading and subleading muon momenta
     if parameters["do_rochester_corrections"]:
-        print("Before applying Rochester corrections: muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
+        #print("Before applying Rochester corrections: muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
         do_rochester_corrections(
             is_mc,
             rochester_corrections[dataset_era],
             muons)
-        print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
+        #print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
 
 
     #get the two leading muons after applying all muon selection
@@ -1236,18 +1236,18 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def cache_data(filenames, name, datastructures, cache_location, datapath, is_mc, nworkers=16):
+def cache_data(filenames, name, datastructures, cache_location, datapath, is_mc, hlt_bits, nworkers=16):
     if nworkers == 1:
         tot_ev = 0
         tot_mb = 0
-        for result in map(cache_data_multiproc_worker, [(name, fn, datastructures, cache_location, datapath, is_mc) for fn in filenames]):
+        for result in map(cache_data_multiproc_worker, [(name, fn, datastructures, cache_location, datapath, is_mc, hlt_bits) for fn in filenames]):
             tot_ev += result[0]
             tot_mb += result[1]
     else:
         with concurrent.futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
             tot_ev = 0
             tot_mb = 0
-            for result in executor.map(cache_data_multiproc_worker, [(name, fn, datastructures, cache_location, datapath, is_mc) for fn in filenames]):
+            for result in executor.map(cache_data_multiproc_worker, [(name, fn, datastructures, cache_location, datapath, is_mc, hlt_bits) for fn in filenames]):
                 tot_ev += result[0]
                 tot_mb += result[1]
     return tot_ev, tot_mb
@@ -1262,9 +1262,11 @@ def create_dataset(name, filenames, datastructures, cache_location, datapath, is
         ds.func_filename_precompute = func_filename_precompute_mc
     return ds
 
-def cache_preselection(ds):
+def cache_preselection(ds, hlt_bits):
     for ifile in range(len(ds.filenames)):
-        sel = ds.eventvars[ifile]["HLT_IsoMu27"] == 1
+        hlt_res = [ds.eventvars[ifile][hlt_bit]==1 for hlt_bit in hlt_bits]
+        sel = NUMPY_LIB.stack(hlt_res).sum(axis=0) == 1
+
         for structname in ds.structs.keys():
             struct_compact = ds.structs[structname][ifile].compact_struct(sel)
             ds.structs[structname][ifile] = struct_compact
@@ -1272,7 +1274,7 @@ def cache_preselection(ds):
             ds.eventvars[ifile][evvar_name] = ds.eventvars[ifile][evvar_name][sel]
 
 def cache_data_multiproc_worker(args):
-    name, filename, datastructure, cache_location, datapath, is_mc = args
+    name, filename, datastructure, cache_location, datapath, is_mc, hlt_bits = args
     t0 = time.time()
     ds = create_dataset(name, [filename], datastructure, cache_location, datapath, is_mc)
     ds.numpy_lib = np
@@ -1284,7 +1286,7 @@ def cache_data_multiproc_worker(args):
 
     #put any preselection here
     processed_size_mb = ds.memsize()/1024.0/1024.0
-    cache_preselection(ds)
+    cache_preselection(ds, hlt_bits)
     processed_size_mb_post = ds.memsize()/1024.0/1024.0
 
     ds.to_cache()
@@ -1412,6 +1414,7 @@ def threaded_metrics(tokill, train_batches_queue):
     return
 
 def run_analysis(args, outpath, datasets, parameters,
+    chunksize, maxfiles,
     lumidata, lumimask, pu_corrections, rochester_corrections,
     lepsf_iso, lepsf_id, lepsf_trig, dnn_model, jetmet_corrections):
     nev_total = 0
@@ -1431,10 +1434,10 @@ def run_analysis(args, outpath, datasets, parameters,
        except Exception as e:
            pass
        filenames_cache = {}
-       for datasetname, globpattern, is_mc in datasets:
+       for datasetname, dataset_era, globpattern, is_mc in datasets:
            filenames_all = glob.glob(args.datapath + globpattern, recursive=True)
            filenames_all = [fn for fn in filenames_all if not "Friend" in fn]
-           filenames_cache[datasetname] = [fn.replace(args.datapath, "") for fn in filenames_all]
+           filenames_cache[datasetname + "_" + dataset_era] = [fn.replace(args.datapath, "") for fn in filenames_all]
     
            with open(args.cache_location + "/datasets.json", "w") as fi:
                fi.write(json.dumps(filenames_cache, indent=2))
@@ -1442,25 +1445,33 @@ def run_analysis(args, outpath, datasets, parameters,
        filenames_cache = json.load(open(args.cache_location + "/datasets.json", "r"))
  
     processed_size_mb = 0
-    for datasetname, era, globpattern, is_mc in datasets:
-        filenames_all = filenames_cache[datasetname]
+    for datasetname, dataset_era, globpattern, is_mc in datasets:
+        filenames_all = filenames_cache[datasetname + "_" + dataset_era]
         filenames_all = [args.datapath + "/" + fn for fn in filenames_all]
  
-        print("Dataset {0} has {1} files".format(datasetname, len(filenames_all)))
-        if args.maxfiles > 0:
-            filenames_all = filenames_all[:args.maxfiles]
+        print("Dataset {0}_{1} has {2} files".format(datasetname, dataset_era, len(filenames_all)))
+        if maxfiles[dataset_era] > 0:
+            filenames_all = filenames_all[:maxfiles[dataset_era]]
 
-        datastructure = create_datastructure(is_mc)
+        datastructure = create_datastructure(is_mc, dataset_era)
 
         if "cache" in args.action:
+ 
+            #Used for preselection in the cache
+            hlt_bits = parameters["baseline"]["hlt_bits"][dataset_era]
             print("Preparing caches from ROOT files")
-            _nev_total, _processed_size_mb = cache_data(filenames_all, datasetname, datastructure, args.cache_location, args.datapath, is_mc, nworkers=args.nthreads)
+
+            _nev_total, _processed_size_mb = cache_data(
+                filenames_all, datasetname, datastructure,
+                args.cache_location, args.datapath, is_mc,
+                hlt_bits,
+                nworkers=args.nthreads)
             nev_total += _nev_total
             processed_size_mb += _processed_size_mb
 
         if "analyze" in args.action:        
 
-            training_set_generator = InputGen(datasetname, era, list(filenames_all), datastructure, args.nthreads, args.chunksize, args.cache_location, args.datapath)
+            training_set_generator = InputGen(datasetname, dataset_era, list(filenames_all), datastructure, args.nthreads, chunksize[dataset_era], args.cache_location, args.datapath)
             threadk = thread_killer()
             threadk.set_tokill(False)
             train_batches_queue = Queue(maxsize=20)
@@ -1521,7 +1532,7 @@ def run_analysis(args, outpath, datasets, parameters,
             ret = sum(rets, Results({}))
             if is_mc:
                 ret["gen_sumweights"] = sum([md["precomputed_results"]["genEventSumw"] for md in ret["cache_metadata"]])
-            ret.save_json("{0}/{1}.json".format(outpath, datasetname))
+            ret.save_json("{0}/{1}_{2}.json".format(outpath, datasetname, dataset_era))
     
     t1 = time.time()
     dt = t1 - t0
@@ -1538,7 +1549,7 @@ def run_analysis(args, outpath, datasets, parameters,
     with open("analysis_benchmarks.txt", "a") as of:
         of.write(json.dumps(bench_ret) + '\n')
 
-def create_datastructure(is_mc):
+def create_datastructure(is_mc, dataset_era):
     datastructures = {
         "Muon": [
             ("Muon_pt", "float32"), ("Muon_eta", "float32"),
@@ -1581,8 +1592,6 @@ def create_datastructure(is_mc):
             ("Flag_globalSuperTightHalo2016Filter", "bool"),
             ("Flag_BadPFMuonFilter", "bool"),
             ("Flag_BadChargedCandidateFilter", "bool"),
-            ("HLT_IsoMu24", "bool"),
-            ("HLT_IsoTkMu24", "bool"),
             ("run", "uint32"),
             ("luminosityBlock", "uint32"),
             ("event", "uint64"),
@@ -1602,6 +1611,17 @@ def create_datastructure(is_mc):
         datastructures["GenPart"] = [
             ("GenPart_pt", "float32"),
         ]
+
+    if dataset_era == "2016":
+        datastructures["EventVariables"] += [
+            ("HLT_IsoMu24", "bool"),
+            ("HLT_IsoTkMu24", "bool"),
+        ]
+    elif dataset_era == "2017":
+        datastructures["EventVariables"] += [
+            ("HLT_IsoMu27", "bool"),
+        ]
+
     return datastructures
 
 def significance_templates(sig_samples, bkg_samples, rets, analysis, histogram_names, do_plots=False, ntoys=1):
@@ -1665,9 +1685,6 @@ def compute_significances(sig_samples, bkg_samples, r, analyses):
         (Z, eZ), (Zc, eZc) = significance_templates(
             sig_samples, bkg_samples, r, an, templates, ntoys=1
         )
-        # print("{0}, Z={1:.3f} +- {2:.3f}, Zc={3:.3f} +- {4:.3f}".format(
-        #     an, Z, eZ, Zc, eZc)
-        # )
         Zs += [(an, Z)]
     return sorted(Zs, key=lambda x: x[1], reverse=True)
 
