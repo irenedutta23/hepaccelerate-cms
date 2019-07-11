@@ -775,7 +775,6 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
     return jet_pt_syst
 
 def fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass, leading_muon, subleading_muon, parameters, masswindow_110_150, masswindow_120_130, NUMPY_LIB):
-    hists["hist__dimuon__npvs"] = fill_with_weights(scalars["PV_npvsGood"], weights, ret_mu["selected_events"], NUMPY_LIB.linspace(0,100,101))
     hists["hist__dimuon__inv_mass"] = fill_with_weights(inv_mass, weights, ret_mu["selected_events"], NUMPY_LIB.linspace(50,200,101))
 
     #get histograms of leading and subleading muon momenta
@@ -975,6 +974,23 @@ def analyze_data(
     mask_events = NUMPY_LIB.ones(muons.numevents(), dtype=NUMPY_LIB.bool)
     mask_events = select_events_trigger(scalars, parameters, mask_events, parameters["hlt_bits"][dataset_era])
 
+
+    #Compute integrated luminosity on data sample and apply golden JSON
+    int_lumi = 0
+    if not is_mc:
+        runs = NUMPY_LIB.asnumpy(scalars["run"])
+        lumis = NUMPY_LIB.asnumpy(scalars["luminosityBlock"])
+        mask_lumi_golden_json = NUMPY_LIB.array(lumimask[dataset_era](runs, lumis))
+        #print("Number of events pre-json: {0}".format(mask_events.sum()))
+        mask_events = mask_events & mask_lumi_golden_json
+        #print("Number of events post-json: {0}".format(mask_events.sum()))
+        if not is_mc and not (lumimask is None):
+            if parameter_set_name == "baseline":
+                mask_events = mask_events & mask_lumi_golden_json
+                #get integrated luminosity in this file
+                if not (lumidata is None):
+                    int_lumi = get_int_lumi(runs, lumis, NUMPY_LIB.asnumpy(mask_lumi_golden_json), lumidata[dataset_era])
+
     #Compute event weights
     weights = {}
     weights["nominal"] = NUMPY_LIB.ones(muons.numevents(), dtype=NUMPY_LIB.float32)
@@ -986,9 +1002,11 @@ def analyze_data(
             weights["nominal"],
             scalars["Pileup_nTrueInt"],
             scalars["PV_npvsGood"])
+        weights["puWeight_off"] = weights["nominal"] 
         weights["puWeight_up"] = weights["nominal"] * pu_weights_up
         weights["puWeight_down"] = weights["nominal"] * pu_weights_down
         weights["nominal"] = weights["nominal"] * pu_weights
+    
 
     #Apply Rochester corrections to leading and subleading muon momenta
     if parameters["do_rochester_corrections"]:
@@ -1006,9 +1024,11 @@ def analyze_data(
         muons, trigobj, mask_events,
         parameters["muon_pt_leading"][dataset_era], parameters["muon_pt"],
         parameters["muon_eta"], parameters["muon_iso"],
-        parameters["muon_id"], parameters["muon_trigger_match_dr"]
+        parameters["muon_id"][dataset_era], parameters["muon_trigger_match_dr"]
     )
 
+    hists["hist__dimuon__npvs"] = fill_with_weights(scalars["PV_npvsGood"], weights, ret_mu["selected_events"], NUMPY_LIB.linspace(0,100,101))
+    
     #Just a check to verify that there are exactly 2 muons per event
     if doverify:
         z = ha.sum_in_offsets(
@@ -1171,18 +1191,6 @@ def analyze_data(
 
     #end of jet systematic loop
 
-    #Compute integrated luminosity on data sample
-    int_lumi = 0
-    if not is_mc and not (lumimask is None):
-        runs = NUMPY_LIB.asnumpy(scalars["run"])
-        lumis = NUMPY_LIB.asnumpy(scalars["luminosityBlock"])
-        mask_lumi_golden_json = NUMPY_LIB.array(lumimask[dataset_era](runs, lumis))
-        if parameter_set_name == "baseline":
-            mask_events = mask_events & mask_lumi_golden_json
-            #get integrated luminosity in this file
-            if not (lumidata is None):
-                int_lumi = get_int_lumi(runs, lumis, NUMPY_LIB.asnumpy(mask_lumi_golden_json), lumidata[dataset_era])
-
     # Collect results
     ret = Results({
         "int_lumi": int_lumi,
@@ -1254,6 +1262,7 @@ def cache_data(filenames, name, datastructures, cache_location, datapath, is_mc,
 
 def func_filename_precompute_mc(filename):
     ret = {"genEventSumw": get_gen_sumweights([filename])}
+    print(filename, ret)
     return ret
  
 def create_dataset(name, filenames, datastructures, cache_location, datapath, is_mc):
@@ -1264,8 +1273,13 @@ def create_dataset(name, filenames, datastructures, cache_location, datapath, is
 
 def cache_preselection(ds, hlt_bits):
     for ifile in range(len(ds.filenames)):
+
+        #OR of the trigger bits by summing
         hlt_res = [ds.eventvars[ifile][hlt_bit]==1 for hlt_bit in hlt_bits]
-        sel = NUMPY_LIB.stack(hlt_res).sum(axis=0) == 1
+        sel = NUMPY_LIB.stack(hlt_res).sum(axis=0) >= 1
+
+        #If we didn't have >=2 muons in NanoAOD, no need to keep this event 
+        sel = sel & (ds.eventvars[ifile]["nMuon"] >= 2)
 
         for structname in ds.structs.keys():
             struct_compact = ds.structs[structname][ifile].compact_struct(sel)
@@ -1319,10 +1333,11 @@ class InputGen:
 
     #did not make this a generator to simplify handling the thread locks
     def nextone(self):
-
         self.chunk_lock.acquire()
-        if self.num_chunk == len(self.paths_chunks):
+
+        if self.num_chunk > 0 and self.num_chunk == len(self.paths_chunks):
             self.chunk_lock.release()
+            print("Generator is done: num_chunk={0}, len(self.paths_chunks)={1}".format(self.num_chunk, len(self.paths_chunks)))
             return None
 
         ds = create_dataset(
@@ -1330,8 +1345,8 @@ class InputGen:
             self.is_mc, self.cache_location, self.datapath, self.is_mc)
 
         ds.era = self.era
-        self.num_chunk += 1
         ds.numpy_lib = numpy
+        self.num_chunk += 1
         self.chunk_lock.release()
 
         # Load caches on multiple threads
@@ -1352,7 +1367,7 @@ class InputGen:
 def threaded_batches_feeder(tokill, batches_queue, dataset_generator):
     while not tokill():
         ds = dataset_generator.nextone()
-        if not ds:
+        if ds is None:
             break 
         batches_queue.put(ds, block=True)
     #print("Cleaning up threaded_batches_feeder worker", threading.get_ident())
@@ -1460,7 +1475,7 @@ def run_analysis(args, outpath, datasets, parameters,
             #Used for preselection in the cache
             hlt_bits = parameters["baseline"]["hlt_bits"][dataset_era]
             print("Preparing caches from ROOT files")
-
+                
             _nev_total, _processed_size_mb = cache_data(
                 filenames_all, datasetname, datastructure,
                 args.cache_location, args.datapath, is_mc,
@@ -1471,7 +1486,9 @@ def run_analysis(args, outpath, datasets, parameters,
 
         if "analyze" in args.action:        
 
-            training_set_generator = InputGen(datasetname, dataset_era, list(filenames_all), datastructure, args.nthreads, chunksize[dataset_era], args.cache_location, args.datapath)
+            training_set_generator = InputGen(
+                datasetname, dataset_era, list(filenames_all), datastructure,
+                args.nthreads, chunksize[dataset_era], args.cache_location, args.datapath)
             threadk = thread_killer()
             threadk.set_tokill(False)
             train_batches_queue = Queue(maxsize=20)
@@ -1495,7 +1512,7 @@ def run_analysis(args, outpath, datasets, parameters,
                 # and put to queue.
                 if not args.async_data:
                     ds = training_set_generator.nextone()
-                    if not ds:
+                    if ds is None:
                         break
                     train_batches_queue.put(ds)
 
@@ -1581,6 +1598,7 @@ def create_datastructure(is_mc, dataset_era):
             ("TrigObj_id", "int32")
         ],
         "EventVariables": [
+            ("nMuon", "int32"),
             ("PV_npvsGood", "float32"), 
             ("PV_ndof", "float32"),
             ("PV_z", "float32"),

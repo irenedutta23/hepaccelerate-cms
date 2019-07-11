@@ -99,7 +99,7 @@ if __name__ == "__main__":
     import json
 
 
-    for era in ["2017", "2016"]:
+    for era in ["2016", "2017"]:
         res = {}
         genweights = {}
         weight_xs = {}
@@ -112,7 +112,7 @@ if __name__ == "__main__":
             pass
 
         #mc_samples = ["vbf", "ggh", "wz_1l1nu2q", "wz_3lnu", "wz_2l2q", "ww_2l2nu", "zz", "ttjets_dl", "ttjets_sl", "dy"]
-        mc_samples = ["ggh", "dy"]
+        mc_samples = ["vbf", "ggh", "ttjets_dl", "dy"]
 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
         for mc_samp in mc_samples:
@@ -137,7 +137,11 @@ if __name__ == "__main__":
                 if var in ["hist_puweight"]:
                     continue
 
-                for weight in ["nominal"]:
+                weight_scenarios = ["nominal"]
+                if var == "hist__dimuon__npvs":
+                    weight_scenarios += ["puWeight_off"]
+
+                for weight in weight_scenarios:
                     hd = load_hist(res["data"][analysis][var]["nominal"])
 
                     hmc = []

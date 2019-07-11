@@ -42,16 +42,16 @@ def parse_args():
 # dataset nickname, datataking era, filename glob pattern, isMC
 datasets = [
 # Official 2017 NanoAOD
-    #("data", "2017", "/store/data/Run2017*/SingleMuon/NANOAOD/Nano14Dec2018-v1/**/*.root", False),
-    #("ggh", "2017", "/store/mc/RunIIFall17NanoAODv4/GluGluHToMuMu_M125_13TeV_amcatnloFXFX_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
-#    ("vbf", "2017", "/store/mc/RunIIFall17NanoAODv4/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
+    ("data", "2017", "/store/data/Run2017*/SingleMuon/NANOAOD/Nano14Dec2018-v1/**/*.root", False),
+    ("ggh", "2017", "/store/mc/RunIIFall17NanoAODv4/GluGluHToMuMu_M125_13TeV_amcatnloFXFX_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
+    ("vbf", "2017", "/store/mc/RunIIFall17NanoAODv4/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("tth", "2017", "/store/mc/RunIIFall17NanoAODv4/ttHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("wmh", "2017", "/store/mc/RunIIFall17NanoAODv4/WminusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("wph", "2017", "/store/mc/RunIIFall17NanoAODv4/WplusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("zh", "2017", "/store/mc/RunIIFall17NanoAODv4/ZH_HToMuMu_ZToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
-    #("dy", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
+    ("dy", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
 #    ("dy_vbf", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
-#    ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv4/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
+    ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv4/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
 #    ("ttjets_sl", "2017", "/store/mc/RunIIFall17NanoAODv4/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
 #    ("ww_2l2nu", "2017", "/store/mc/RunIIFall17NanoAODv4/WWTo2L2Nu_NNPDF31_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
 #    ("wz_3lnu", "2017", "/store/mc/RunIIFall17NanoAODv4/WZTo3LNu_13TeV-powheg-pythia8/**/*.root", True),
@@ -59,10 +59,12 @@ datasets = [
 #    ("wz_1l1nu2q", "2017", "/store/mc/RunIIFall17NanoAODv4/WZTo1L1Nu2Q_13TeV_amcatnloFXFX_madspin_pythia8/**/*.root", True),
 #    ("zz", "2017", "/store/mc/RunIIFall17NanoAODv4/ZZTo2L2Nu_13TeV_powheg_pythia8/**/*.root", True),
   
-# 2016 datasets, private NanoAOD produced by Nan and existing only on Caltech T2 
-    ("dy", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/**/*.root", True),
+# 2016 NanoAOD
+    ("dy", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
     ("ggh", "2016", "/store/mc/RunIISummer16NanoAODv5/GluGlu_HToMuMu_M125_13TeV_powheg_pythia8/**/*.root", True),
-    ("data", "2016", "/store/data/Run2016*/SingleMuon/NANOAOD/Nano1June2019-v1/**/*.root", False),
+    ("ttjets_dl", "2016", "/store/mc/RunIISummer16NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
+    ("vbf", "2016", "/storage/user/jpata/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
+    ("data", "2016", "/store/data/Run2016*/SingleMuon/NANOAOD/Nano1June2019*/**/*.root", False),
 ]
 
 # How many NanoAOD files to load to memory simultaneously.
@@ -238,11 +240,11 @@ if __name__ == "__main__":
             "nPV": 0,
 
             # From HmmAnalyzer code
-            "NdfPV": 0,
-            "zPV": 99999,
+            #"NdfPV": 0,
+            #"zPV": 99999,
             # True cuts
-            # "NdfPV": 4,
-            # "zPV": 24,
+            "NdfPV": 4,
+            "zPV": 24,
 
             # Will be applied with OR
             "hlt_bits": {
@@ -254,11 +256,11 @@ if __name__ == "__main__":
             "muon_pt_leading": {"2016": 26.0, "2017": 30.0},
             "muon_eta": 2.4,
             "muon_iso": 0.25,
-            "muon_id": "medium",
+            "muon_id": {"2016": "medium", "2017": "medium"},
             "muon_trigger_match_dr": 0.1,
             
-            "do_rochester_corrections": True,
-            "do_lepton_sf": True,
+            "do_rochester_corrections": False,
+            "do_lepton_sf": False,
             
             "do_jec": False, 
             "jet_mu_dr": 0.4,
@@ -318,7 +320,7 @@ if __name__ == "__main__":
     #analysis_parameters["baseline"]["categorization_trees"].update(rand_trees)
 
     lumimask = {
-        "2016": LumiMask("data/Cert_271036-284044_13TeV_ReReco_07Aug2017_Collisions16_JSON.txt", np, backend_cpu),
+        "2016": LumiMask("data/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt", np, backend_cpu),
         "2017": LumiMask("data/Cert_294927-306462_13TeV_EOY2017ReReco_Collisions17_JSON.txt", np, backend_cpu),
     }
 
