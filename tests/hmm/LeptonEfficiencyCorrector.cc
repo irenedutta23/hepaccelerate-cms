@@ -30,26 +30,28 @@ void LeptonEfficiencyCorrector::setLeptons(int nLep, int *lepPdgId, float *lepPt
 }
 
 float LeptonEfficiencyCorrector::getSF(int pdgid, float pt, float eta) const {
-  float out=1.;
-  float x = abs(pdgid)==13 ? pt : eta;
-  float y = abs(pdgid)==13 ? fabs(eta) : pt;
+  float out=0.0;
+  const float x = abs(pdgid)==13 ? pt : eta;
+  const float y = abs(pdgid)==13 ? fabs(eta) : pt;
   int i = 0;
   for(const auto* hist : effmaps_) {
-    WeightCalculatorFromHistogram wc((TH1*)hist);
-    out *= weights_[i] * wc.getWeight(x,y);
+    WeightCalculatorFromHistogram wc((TH2*)hist);
+    //std::cout << x << " " << y << " " << weights_[i] << " " << wc.getWeightErr(x,y) << std::endl; 
+    out += weights_[i] * wc.getWeight(x,y);
     i++;
   }
   return out;
 }
 
 float LeptonEfficiencyCorrector::getSFErr(int pdgid, float pt, float eta) const {
-  float out=1.;
-  float x = abs(pdgid)==13 ? pt : eta;
-  float y = abs(pdgid)==13 ? fabs(eta) : pt;
+  float out=0.0;
+  const float x = abs(pdgid)==13 ? pt : eta;
+  const float y = abs(pdgid)==13 ? fabs(eta) : pt;
   int i = 0;
   for(const auto* hist : effmaps_) {
-    WeightCalculatorFromHistogram wc((TH1*)hist);
-    out *= weights_[i] * wc.getWeightErr(x,y);
+    WeightCalculatorFromHistogram wc((TH2*)hist);
+    //std::cout << x << " " << y << " " << weights_[i] << " " << wc.getWeightErr(x,y) << std::endl; 
+    out += weights_[i] * wc.getWeightErr(x,y);
     i++;
   }
   return out;

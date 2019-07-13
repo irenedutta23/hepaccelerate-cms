@@ -99,7 +99,7 @@ if __name__ == "__main__":
     import json
 
 
-    for era in ["2016", "2017"]:
+    for era in ["2016", "2017", "2018"]:
         res = {}
         genweights = {}
         weight_xs = {}
@@ -128,21 +128,26 @@ if __name__ == "__main__":
         print(genweights)
 
         for analysis in ["baseline"]:
-            #for var in [k for k in res["dy"][analysis].keys() if k.startswith("hist_")]:
-            for var in [
-                "hist__dimuon__inv_mass",
-                "hist__dimuon__leading_muon_pt",
-                "hist__dimuon__subleading_muon_pt",
-                "hist__dimuon__npvs"]:
+            for var in [k for k in res["dy"][analysis].keys() if k.startswith("hist_")]:
+            #for var in [
+            #    "hist__dimuon__inv_mass",
+            #    "hist__dimuon__leading_muon_pt",
+            #    #"hist__dimuon__subleading_muon_pt",
+            #    #"hist__dimuon__npvs"
+            #    ]:
                 if var in ["hist_puweight"]:
                     continue
 
-                weight_scenarios = ["nominal"]
+                weight_scenarios = ["nominal", "leptonsf"]
                 if var == "hist__dimuon__npvs":
                     weight_scenarios += ["puWeight_off"]
-
                 for weight in weight_scenarios:
-                    hd = load_hist(res["data"][analysis][var]["nominal"])
+                    print(analysis, var, weight)
+                    try:
+                        hd = load_hist(res["data"][analysis][var]["nominal"])
+                    except KeyError:
+                        print("Histogram {0} not found for data, skipping".format(var))
+                        continue
 
                     hmc = []
                     print("data", np.sum(hd.contents))

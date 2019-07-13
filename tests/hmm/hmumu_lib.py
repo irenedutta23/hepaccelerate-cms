@@ -1,6 +1,7 @@
 from cffi import FFI
 import numpy as numpy_lib
 import os
+import uproot
 
 class LibHMuMu:
     def __init__(self, libpath=os.path.dirname(os.path.realpath(__file__)) + "/libhmm.so"):
@@ -64,6 +65,13 @@ class RochesterCorrections:
 class LeptonEfficiencyCorrections:
     def __init__(self, libhmm, filenames, histonames, weights):
         self.libhmm = libhmm
+        for fn, hn in zip(filenames, histonames):
+            if not os.path.isfile(fn):
+                raise FileNotFoundError("File {0} does not exist".format(fn))
+            fi = uproot.open(fn)
+            if not hn in fi:
+                raise KeyError("Histogram {0} does not exist in file {1}".format(hn, fn))
+ 
         filenames_C = [libhmm.ffi.new("char[]", fn.encode("ascii")) for fn in filenames]
         histonames_C = [libhmm.ffi.new("char[]", hn.encode("ascii")) for hn in histonames]
         self.c_class = self.libhmm.new_LeptonEfficiencyCorrector(

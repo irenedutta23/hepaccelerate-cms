@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--nthreads', '-t', action='store', help='Number of CPU threads or workers to use', type=int, default=4, required=False)
     parser.add_argument('--datapath', '-p', action='store', help='Prefix to load NanoAOD data from', default="/nvmedata")
     parser.add_argument('--maxfiles', '-m', action='store', help='Maximum number of files to process', default=-1, type=int)
-    parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously', default=1, type=int)
+    parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously', default=2, type=int)
     parser.add_argument('--cache-location', action='store', help='Cache location', default='./mycache', type=str)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
     parser.add_argument('--niter', action='store', help='Number of categorization optimization iterations', default=1, type=int)
@@ -50,7 +50,8 @@ datasets = [
 #    ("wph", "2017", "/store/mc/RunIIFall17NanoAODv4/WplusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("zh", "2017", "/store/mc/RunIIFall17NanoAODv4/ZH_HToMuMu_ZToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
     ("dy", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
-#    ("dy_vbf", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
+    ("dy_m105_160", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/**/*.root", True),
+    ("dy_m105_160_vbf", "2017", "/store/mc/RunIIFall17NanoAODv4/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
     ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv4/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
 #    ("ttjets_sl", "2017", "/store/mc/RunIIFall17NanoAODv4/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
 #    ("ww_2l2nu", "2017", "/store/mc/RunIIFall17NanoAODv4/WWTo2L2Nu_NNPDF31_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
@@ -63,14 +64,21 @@ datasets = [
     ("dy", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
     ("ggh", "2016", "/store/mc/RunIISummer16NanoAODv5/GluGlu_HToMuMu_M125_13TeV_powheg_pythia8/**/*.root", True),
     ("ttjets_dl", "2016", "/store/mc/RunIISummer16NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
-    ("vbf", "2016", "/storage/user/jpata/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
+    ("vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
     ("data", "2016", "/store/data/Run2016*/SingleMuon/NANOAOD/Nano1June2019*/**/*.root", False),
+
+# 2018 NanoAOD
+    ("dy", "2018", "/store/mc/RunIIAutumn18NanoAODv4/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/**/*.root", True),
+    ("ggh", "2018", "/store/mc/RunIIAutumn18NanoAODv4/GluGluHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
+    ("ttjets_dl", "2018", "/store/mc/RunIIAutumn18NanoAODv4/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
+    ("vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv4/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
+    ("data", "2018", "/store/data/Run2018*/SingleMuon/NANOAOD/Nano14Dec2018*/**/*.root", False),
 ]
 
 # How many NanoAOD files to load to memory simultaneously.
 # Larger numbers mean faster runtime, but may run out of memory
-chunksizes = {"2016": 1, "2017": 1}
-maxfiles_mult = {"2016": 1, "2017": 1}
+chunksizes_mult = {"2016": 1, "2017": 1, "2018": 1}
+maxfiles_mult = {"2016": 1, "2017": 1, "2018": 1}
 
 # Synchronization datasets
 datasets_sync = [
@@ -250,25 +258,26 @@ if __name__ == "__main__":
             "hlt_bits": {
                 "2016": ["HLT_IsoMu24", "HLT_IsoTkMu24"],
                 "2017": ["HLT_IsoMu27"],
+                "2018": ["HLT_IsoMu24"],
                 },
 
             "muon_pt": 20,
-            "muon_pt_leading": {"2016": 26.0, "2017": 30.0},
+            "muon_pt_leading": {"2016": 26.0, "2017": 30.0, "2018": 26.0},
             "muon_eta": 2.4,
             "muon_iso": 0.25,
-            "muon_id": {"2016": "medium", "2017": "medium"},
+            "muon_id": {"2016": "medium", "2017": "medium", "2018": "medium"},
             "muon_trigger_match_dr": 0.1,
             
-            "do_rochester_corrections": False,
-            "do_lepton_sf": False,
+            "do_rochester_corrections": True,
+            "do_lepton_sf": True,
             
             "do_jec": False, 
             "jet_mu_dr": 0.4,
-            "jet_pt": {"2016": 25.0, "2017": 30.0},
+            "jet_pt": {"2016": 25.0, "2017": 30.0, "2018": 30.0},
             "jet_eta": 4.7,
             "jet_id": "tight",
             "jet_puid": "loose",
-            "jet_btag": {"2016": 0.6321, "2017": 0.4941},
+            "jet_btag": {"2016": 0.6321, "2017": 0.4941, "2018": 0.4184},
 
             "inv_mass_bins": 41,
 
@@ -281,28 +290,28 @@ if __name__ == "__main__":
             "dnn_varlist_order": ['softJet5', 'dRmm', 'dEtamm', 'dPhimm', 'M_jj', 'pt_jj', 'eta_jj', 'phi_jj', 'M_mmjj', 'eta_mmjj', 'phi_mmjj', 'dEta_jj', 'Zep', 'dRmin_mj', 'dRmax_mj', 'dRmin_mmj', 'dRmax_mmj', 'leadingJet_pt', 'subleadingJet_pt', 'leadingJet_eta', 'subleadingJet_eta', 'leadingJet_qgl', 'subleadingJet_qgl', 'cthetaCS', 'Higgs_pt', 'Higgs_eta'],
             "dnn_input_histogram_bins": {
                 "softJet5": (0,10,10),
-                "dRmm": (0,2,20),
+                "dRmm": (0,5,20),
                 "dEtamm": (-2,2,20),
                 "dPhimm": (-2,2,20),
                 "M_jj": (0,400,20),
                 "pt_jj": (0,400,20),
-                "eta_jj": (-3,3,20),
-                "phi_jj": (-3,3,20),
+                "eta_jj": (-5,5,20),
+                "phi_jj": (-5,5,20),
                 "M_mmjj": (0,400,20),
                 "eta_mmjj": (-3,3,20),
                 "phi_mmjj": (-3,3,20),
                 "dEta_jj": (-3,3,20),
                 "Zep": (-2,2,20),
-                "dRmin_mj": (0,2,20),
-                "dRmax_mj": (0,2,20),
-                "dRmin_mmj": (0,2,20),
-                "dRmax_mmj": (0,2,20),
+                "dRmin_mj": (0,5,20),
+                "dRmax_mj": (0,5,20),
+                "dRmin_mmj": (0,5,20),
+                "dRmax_mmj": (0,5,20),
                 "leadingJet_pt": (0, 200, 20),
                 "subleadingJet_pt": (0, 200, 20),
-                "leadingJet_eta": (0, 200, 20),
-                "subleadingJet_eta": (0, 200, 20),
-                "leadingJet_qgl": (0, 200, 20),
-                "subleadingJet_qgl": (0, 200, 20),
+                "leadingJet_eta": (-5, 5, 20),
+                "subleadingJet_eta": (-5, 5, 20),
+                "leadingJet_qgl": (-1, 1, 20),
+                "subleadingJet_qgl": (-1, 1, 20),
                 "cthetaCS": (-1, 1, 20),
                 "Higgs_pt": (0, 200, 20),
                 "Higgs_eta": (-3, 3, 20),
@@ -322,27 +331,74 @@ if __name__ == "__main__":
     lumimask = {
         "2016": LumiMask("data/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt", np, backend_cpu),
         "2017": LumiMask("data/Cert_294927-306462_13TeV_EOY2017ReReco_Collisions17_JSON.txt", np, backend_cpu),
+        "2018": LumiMask("data/Cert_314472-325175_13TeV_17SeptEarlyReReco2018ABC_PromptEraD_Collisions18_JSON.txt", np, backend_cpu),
     }
 
     lumidata = {
         "2016": LumiData("data/lumi2016.csv"),
-        "2017": LumiData("data/lumi2017.csv")
+        "2017": LumiData("data/lumi2017.csv"),
+        "2018": LumiData("data/lumi2018.csv")
     }
 
     pu_corrections = {
         "2016": load_puhist_target("data/pileup/RunII_2016_data.root"),
-        "2017": load_puhist_target("data/pileup/RunII_2017_data.root")
+        "2017": load_puhist_target("data/pileup/RunII_2017_data.root"),
+        "2018": load_puhist_target("data/pileup/RunII_2018_data.root")
     }
     
     libhmm = LibHMuMu()
     rochester_corr = {
         "2016": RochesterCorrections(libhmm, "data/RoccoR2016.txt"),
-        "2017": RochesterCorrections(libhmm, "data/RoccoR2017v1.txt")
+        "2017": RochesterCorrections(libhmm, "data/RoccoR2017v1.txt"),
+        "2018": RochesterCorrections(libhmm, "data/RoccoR2018.txt")
     }
 
-    lepsf_iso = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/RunBCDEF_SF_ISO.root"], ["NUM_LooseRelIso_DEN_MediumID_pt_abseta"], [1.0])
-    lepsf_id = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/RunBCDEF_SF_ID.root"], ["NUM_MediumID_DEN_genTracks_pt_abseta"], [1.0])
-    lepsf_trig = LeptonEfficiencyCorrections(libhmm, ["data/leptonSF/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root"], ["IsoMu27_PtEtaBins/pt_abseta_ratio"], [1.0])
+    ratios_dataera = {
+        "2016": [0.5548, 1.0 - 0.5548],
+        "2017": 1.0,
+        "2018": 1.0
+    }
+
+    lepsf_iso = {
+        "2016": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2016/RunBCDEF_SF_ISO.root", "data/leptonSF/2016/RunGH_SF_ISO.root"],
+            ["NUM_LooseRelIso_DEN_MediumID_eta_pt", "NUM_LooseRelIso_DEN_MediumID_eta_pt"],
+            ratios_dataera["2016"]),
+        "2017": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2017/RunBCDEF_SF_ISO_syst.root"],
+            ["NUM_LooseRelIso_DEN_MediumID_pt_abseta"], [1.0]),
+        "2018": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2018/RunABCD_SF_ISO.root"],
+            ["NUM_LooseRelIso_DEN_MediumID_pt_abseta"], [1.0]),
+    }
+    lepsf_id = {
+        "2016": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2016/RunBCDEF_SF_ID.root", "data/leptonSF/2016/RunGH_SF_ID.root"],
+            ["NUM_MediumID_DEN_genTracks_eta_pt", "NUM_MediumID_DEN_genTracks_eta_pt"],
+            ratios_dataera["2016"]),
+        "2017": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2017/RunBCDEF_SF_ID_syst.root"],
+            ["NUM_MediumID_DEN_genTracks_pt_abseta"], [1.0]),
+        "2018": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2018/RunABCD_SF_ID.root"],
+            ["NUM_MediumID_DEN_TrackerMuons_pt_abseta"], [1.0])
+    }
+    lepsf_trig = {
+        "2016": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2016/EfficienciesAndSF_RunBtoF.root", "data/leptonSF/2016/EfficienciesAndSF_RunGtoH.root"],
+            ["IsoMu24_OR_IsoTkMu24_PtEtaBins/abseta_pt_ratio", "IsoMu24_OR_IsoTkMu24_PtEtaBins/abseta_pt_ratio"],
+            ratios_dataera["2016"]),
+        "2017": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2017/EfficienciesAndSF_RunBtoF_Nov17Nov2017.root"],
+            ["IsoMu27_PtEtaBins/pt_abseta_ratio"],
+            [1.0]
+        ),
+        "2018": LeptonEfficiencyCorrections(libhmm,
+            ["data/leptonSF/2018/EfficienciesAndSF_2018Data_AfterMuonHLTUpdate.root"],
+            ["IsoMu24_PtEtaBins/pt_abseta_ratio"],
+            [1.0]
+        ),
+     }
     jetmet_corrections = JetMetCorrections()
 
     #Run baseline analysis
@@ -378,7 +434,8 @@ if __name__ == "__main__":
     dnn_model = keras.models.load_model("data/dnn_model.h5")
 
     run_analysis(args, outpath, datasets, analysis_parameters,
-        chunksizes, {k: args.maxfiles*v for k, v in maxfiles_mult.items()},
+        {k: args.chunksize*v for k, v in chunksizes_mult.items()},
+        {k: args.maxfiles*v for k, v in maxfiles_mult.items()},
         lumidata, lumimask, pu_corrections, rochester_corr,
         lepsf_iso, lepsf_id, lepsf_trig, dnn_model,
         jetmet_corrections)
