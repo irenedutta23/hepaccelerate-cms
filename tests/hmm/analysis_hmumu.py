@@ -20,6 +20,7 @@ from hmumu_lib import LibHMuMu, RochesterCorrections, LeptonEfficiencyCorrection
 
 import os
 from coffea.util import USE_CUPY
+import getpass
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Caltech HiggsMuMu analysis')
@@ -31,7 +32,7 @@ def parse_args():
     parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously (larger is faster)', default=5, type=int)
     parser.add_argument('--cache-location', action='store', help='Cache location', default='./mycache', type=str)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
-    parser.add_argument('--era', action='append', help='Dataset eras to process', type=str, required=True)
+    parser.add_argument('--era', action='append', help='Dataset eras to process', type=str, default=["2016", "2017", "2018"])
     parser.add_argument('--pinned', action='store_true', help='Use CUDA pinned memory')
     parser.add_argument('--do-sync', action='store_true', help='Run only synchronization datasets')
     args = parser.parse_args()
@@ -39,6 +40,10 @@ def parse_args():
 
 # dataset nickname, datataking era, filename glob pattern, isMC
 datasets = [
+    ("ggh", "2016", "/store/mc/RunIISummer16NanoAODv5/GluGlu_HToMuMu_M125_13TeV_powheg_pythia8/**/*.root", True),
+    ("ggh", "2017", "/store/mc/RunIIFall17NanoAODv5/GluGluHToMuMu_M125_13TeV_amcatnloFXFX_pythia8/**/*.root", True),
+    ("ggh", "2018", "/store/mc/RunIIAutumn18NanoAODv5/GluGluHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
+    
     ("data", "2016", "/store/data/Run2016*/SingleMuon/NANOAOD/Nano1June2019*/**/*.root", False),
     ("data", "2017", "/store/data/Run2017*/SingleMuon/NANOAOD/Nano1June2019-v1/**/*.root", False),
     ("data", "2018", "/store/data/Run2018*/SingleMuon/NANOAOD/Nano1June2019-v1/**/*.root", False),
@@ -56,7 +61,6 @@ datasets = [
     ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
     ("ttjets_dl", "2018", "/store/mc/RunIIAutumn18NanoAODv5/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
     
-    ("ggh", "2017", "/store/mc/RunIIFall17NanoAODv5/GluGluHToMuMu_M125_13TeV_amcatnloFXFX_pythia8/**/*.root", True),
     ("vbf", "2017", "/store/mc/RunIIFall17NanoAODv5/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
 #    ("tth", "2017", "/store/mc/RunIIFall17NanoAODv4/ttHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("wmh", "2017", "/store/mc/RunIIFall17NanoAODv4/WminusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
@@ -70,11 +74,9 @@ datasets = [
 #    ("zz", "2017", "/store/mc/RunIIFall17NanoAODv4/ZZTo2L2Nu_13TeV_powheg_pythia8/**/*.root", True),
   
 # 2016 NanoAOD
-    ("ggh", "2016", "/store/mc/RunIISummer16NanoAODv5/GluGlu_HToMuMu_M125_13TeV_powheg_pythia8/**/*.root", True),
     ("vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
 
 # 2018 NanoAOD
-    ("ggh", "2018", "/store/mc/RunIIAutumn18NanoAODv5/GluGluHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
     ("vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
 ]
 
@@ -282,7 +284,7 @@ if __name__ == "__main__":
             "do_rochester_corrections": True,
             "do_lepton_sf": True,
             
-            "do_jec": False, 
+            "do_jec": True, 
             "jet_mu_dr": 0.4,
             "jet_pt": {"2016": 25.0, "2017": 30.0, "2018": 30.0},
             "jet_eta": 4.7,
@@ -296,7 +298,7 @@ if __name__ == "__main__":
             "extra_electrons_eta": 2.5,
             "extra_electrons_iso": 0.4,
             "extra_electrons_id": "mvaFall17V1Iso_WP90",
-
+            "dnn_vars_path": "{0}/dnn_vars".format(args.cache_location),
             #Irene's DNN input variable order for keras
             "dnn_varlist_order": ['softJet5', 'dRmm', 'dEtamm', 'dPhimm', 'M_jj', 'pt_jj', 'eta_jj', 'phi_jj', 'M_mmjj', 'eta_mmjj', 'phi_mmjj', 'dEta_jj', 'Zep', 'dRmin_mj', 'dRmax_mj', 'dRmin_mmj', 'dRmax_mmj', 'leadingJet_pt', 'subleadingJet_pt', 'leadingJet_eta', 'subleadingJet_eta', 'leadingJet_qgl', 'subleadingJet_qgl', 'cthetaCS', 'Higgs_pt', 'Higgs_eta'],
             "dnn_input_histogram_bins": {
@@ -353,6 +355,7 @@ if __name__ == "__main__":
     }
     
     libhmm = LibHMuMu()
+    #https://twiki.cern.ch/twiki/bin/viewauth/CMS/RochcorMuon
     rochester_corr = {
         "2016": RochesterCorrections(libhmm, "data/RoccoR2016.txt"),
         "2017": RochesterCorrections(libhmm, "data/RoccoR2017v1.txt"),

@@ -1315,8 +1315,8 @@ def analyze_data(
     for jet_syst_name, jet_pt_vec in jet_pt_syst.items():
        
         #For the moment, skip other jet systematics 
-        if jet_syst_name[0] != "nominal":
-            continue
+        #if jet_syst_name[0] != "nominal":
+        #    continue
         
         # For events where the JEC/JER was variated, fill only the nominal weight
         weights_selected = select_weights(weights, jet_syst_name)
@@ -1390,7 +1390,7 @@ def analyze_data(
                 weights["nominal"][ret_mu["selected_events"]], NUMPY_LIB.linspace(0,500,101)
             )}
 
-        if save_dnn_vars:
+        if save_dnn_vars and jet_syst_name[0] == "nominal":
             dnn_vars_np = {k: NUMPY_LIB.asnumpy(v) for k, v in dnn_vars.items()}
             if is_mc:
                 dnn_vars_np["genweight"] = NUMPY_LIB.asnumpy(scalars["genWeight"][dnn_presel])
@@ -1400,7 +1400,10 @@ def analyze_data(
                 arrs += [v]
                 names += [k]
             arrdata = np.core.records.fromarrays(arrs, names=names)
-            np.save("/storage/user/jpata/hmm/dnn_vars/{0}/{1}_{2}.npy".format(dataset_era, dataset_name, dataset_num_chunk), arrdata, allow_pickle=False)
+            outpath = "{0}/{1}".format(parameters["dnn_vars_path"], dataset_era) 
+            if not os.path.isdir(outpath):
+                os.makedirs(outpath)
+            np.save("{0}/{1}_{2}.npy".format(outpath, dataset_name, dataset_num_chunk), arrdata, allow_pickle=False)
 
         #Put the DNN histograms into the result dictionary
         for k, v in hists_dnn.items():
