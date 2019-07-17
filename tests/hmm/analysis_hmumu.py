@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously (larger is faster)', default=5, type=int)
     parser.add_argument('--cache-location', action='store', help='Cache location', default='./mycache', type=str)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
-    parser.add_argument('--era', action='append', help='Dataset eras to process', type=str, default=["2016", "2017", "2018"])
+    parser.add_argument('--era', action='append', help='Dataset eras to process', type=str, required=True)
     parser.add_argument('--pinned', action='store_true', help='Use CUDA pinned memory')
     parser.add_argument('--do-sync', action='store_true', help='Run only synchronization datasets')
     args = parser.parse_args()
@@ -48,20 +48,21 @@ datasets = [
     ("data", "2017", "/store/data/Run2017*/SingleMuon/NANOAOD/Nano1June2019-v1/**/*.root", False),
     ("data", "2018", "/store/data/Run2018*/SingleMuon/NANOAOD/Nano1June2019-v1/**/*.root", False),
     
-    ("dy", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("dy_m105_160", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
-    ("dy_m105_160_vbf", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
     ("dy", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("dy_m105_160", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("dy_m105_160_vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    # ("dy_m105_160", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    # ("dy_m105_160_vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    ("dy", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    # ("dy_m105_160", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/**/*.root", True),
+    # ("dy_m105_160_vbf", "2017", "/store/mc/RunIIFall17NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
     ("dy", "2018", "/store/mc/RunIIAutumn18NanoAODv5/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("dy_m105_160", "2018", "/store/mc/RunIIAutumn18NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("dy_m105_160_vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
-    ("ttjets_dl", "2016", "/store/mc/RunIISummer16NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
-    ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
-    ("ttjets_dl", "2018", "/store/mc/RunIIAutumn18NanoAODv5/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
+    # ("dy_m105_160", "2018", "/store/mc/RunIIAutumn18NanoAODv5/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    # ("dy_m105_160_vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv5/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/**/*.root", True),
+    # ("ttjets_dl", "2016", "/store/mc/RunIISummer16NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
+    # ("ttjets_dl", "2017", "/store/mc/RunIIFall17NanoAODv5/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/**/*.root", True),
+    # ("ttjets_dl", "2018", "/store/mc/RunIIAutumn18NanoAODv5/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/**/*.root", True),
     
-    ("vbf", "2017", "/store/mc/RunIIFall17NanoAODv5/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
+    # ("vbf", "2017", "/store/mc/RunIIFall17NanoAODv5/VBFHToMuMu_M-125_TuneCP5_PSweights_13TeV_powheg_pythia8/**/*.root", True),
+
 #    ("tth", "2017", "/store/mc/RunIIFall17NanoAODv4/ttHToMuMu_M125_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("wmh", "2017", "/store/mc/RunIIFall17NanoAODv4/WminusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
 #    ("wph", "2017", "/store/mc/RunIIFall17NanoAODv4/WplusH_HToMuMu_WToAll_M125_13TeV_powheg_pythia8/NANOAODSIM/*12Apr2018_Nano14Dec2018*/**/*.root", True),
@@ -74,10 +75,10 @@ datasets = [
 #    ("zz", "2017", "/store/mc/RunIIFall17NanoAODv4/ZZTo2L2Nu_13TeV_powheg_pythia8/**/*.root", True),
   
 # 2016 NanoAOD
-    ("vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
+#    ("vbf", "2016", "/store/mc/RunIISummer16NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
 
 # 2018 NanoAOD
-    ("vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
+#    ("vbf", "2018", "/store/mc/RunIIAutumn18NanoAODv5/VBFHToMuMu_M125_TuneCP5_PSweights_13TeV_amcatnlo_pythia8/**/*.root", True),
 ]
 
 # How many NanoAOD files to load to memory simultaneously.
@@ -127,56 +128,74 @@ from coffea.jetmet_tools import JetCorrectionUncertainty
 from coffea.jetmet_tools import JetResolutionScaleFactor
 
 class JetMetCorrections:
-    def __init__(self, do_factorized_jec_unc=False):
+    def __init__(self,
+        jec_tag,
+        jec_tag_data,
+        jer_tag,
+        do_factorized_jec_unc=False):
+
         extract = extractor()
         
-        extract.add_weight_sets(['* * coffea/tests/samples/Summer16_23Sep2016V3_MC_L1FastJet_AK4PFPuppi.jec.txt.gz',
-                                 '* * coffea/tests/samples/Summer16_23Sep2016V3_MC_L2L3Residual_AK4PFPuppi.jec.txt.gz',
-                                 '* * coffea/tests/samples/Summer16_23Sep2016V3_MC_L2Relative_AK4PFPuppi.jec.txt.gz',
-                                 '* * coffea/tests/samples/Summer16_23Sep2016V3_MC_L3Absolute_AK4PFPuppi.jec.txt.gz',
-                                 '* * coffea/tests/samples/Summer16_23Sep2016V3_MC_UncertaintySources_AK4PFPuppi.junc.txt.gz',
-                                 '* * coffea/tests/samples/Summer16_23Sep2016V3_MC_Uncertainty_AK4PFPuppi.junc.txt.gz',
-                                 '* * coffea/tests/samples/Spring16_25nsV10_MC_PtResolution_AK4PFPuppi.jr.txt.gz',
-                                 '* * coffea/tests/samples/Spring16_25nsV10_MC_SF_AK4PFPuppi.jersf.txt.gz'])
+        #For MC
+        extract.add_weight_sets([
+            '* * data/jme/{0}_L1FastJet_AK4PFchs.txt'.format(jec_tag),
+            '* * data/jme/{0}_L2L3Residual_AK4PFchs.txt'.format(jec_tag),
+            '* * data/jme/{0}_L2Relative_AK4PFchs.txt'.format(jec_tag),
+            '* * data/jme/{0}_L3Absolute_AK4PFchs.txt'.format(jec_tag),
+            '* * data/jme/{0}_UncertaintySources_AK4PFchs.junc.txt'.format(jec_tag),
+            '* * data/jme/{0}_Uncertainty_AK4PFchs.junc.txt'.format(jec_tag),
+            '* * data/jme/{0}_PtResolution_AK4PFchs.jr.txt'.format(jer_tag),
+            '* * data/jme/{0}_SF_AK4PFchs.jersf.txt'.format(jer_tag)])
+
+        #For data, make sure we don't duplicate
+        tags_done = []
+        for run, tag in jec_tag_data.items():
+            if not (tag in tags_done):
+                extract.add_weight_sets([
+                '* * data/jme/{0}_L1FastJet_AK4PFchs.txt'.format(tag),
+                '* * data/jme/{0}_L2L3Residual_AK4PFchs.txt'.format(tag),
+                '* * data/jme/{0}_L2Relative_AK4PFchs.txt'.format(tag),
+                '* * data/jme/{0}_L3Absolute_AK4PFchs.txt'.format(tag)
+                ])
+                tags_done += [tag]
         
         extract.finalize()
         evaluator = extract.make_evaluator()
         
-        jec_names = ['Summer16_23Sep2016V3_MC_L1FastJet_AK4PFPuppi',
-                     'Summer16_23Sep2016V3_MC_L2Relative_AK4PFPuppi',
-                     'Summer16_23Sep2016V3_MC_L2L3Residual_AK4PFPuppi',
-                     'Summer16_23Sep2016V3_MC_L3Absolute_AK4PFPuppi']
+        jec_names_mc = [
+            '{0}_L1FastJet_AK4PFchs'.format(jec_tag),
+            '{0}_L2Relative_AK4PFchs'.format(jec_tag),
+            '{0}_L2L3Residual_AK4PFchs'.format(jec_tag),
+            '{0}_L3Absolute_AK4PFchs'.format(jec_tag)]
+
+        self.jec_data = {}
+        for run, tag in jec_tag_data.items():
+            jec_names_data = [
+                '{0}_L1FastJet_AK4PFchs'.format(jec_tag),
+                '{0}_L2Relative_AK4PFchs'.format(jec_tag),
+                '{0}_L2L3Residual_AK4PFchs'.format(jec_tag),
+                '{0}_L3Absolute_AK4PFchs'.format(jec_tag)]
+            self.jec_data[run] = FactorizedJetCorrector(**{name: evaluator[name] for name in jec_names_data})
+
+        self.jec_mc = FactorizedJetCorrector(**{name: evaluator[name] for name in jec_names_mc})
         
-        self.jec = FactorizedJetCorrector(**{name: evaluator[name] for name in jec_names})
-        
-        test_eta = np.array([0.2, 1.8, 3.4])
-        test_Rho = np.array([1.0, 1.2, 1.3])
-        test_pt = np.array([100.0, 200.0, 300.0])
-        test_A = np.array([5.0, 6.0, 7.0])
-        
-        #corr = corrector.getCorrection(JetEta=test_eta, Rho=test_Rho, JetPt=test_pt, JetA=test_A)
-        #print(corr)
-        
-        jer_names = ['Spring16_25nsV10_MC_PtResolution_AK4PFPuppi']
+        jer_names = ['{0}_PtResolution_AK4PFchs'.format(jer_tag)]
         self.jer = JetResolution(**{name: evaluator[name] for name in jer_names})
-        #resos = reso.getResolution(JetEta=test_eta, Rho=test_Rho, JetPt=test_pt)
-        #print(list(resos))
+
             
-        jersf_names = ['Spring16_25nsV10_MC_SF_AK4PFPuppi']
+        jersf_names = ['{0}_SF_AK4PFchs'.format(jer_tag)]
         self.jersf = JetResolutionScaleFactor(**{name: evaluator[name] for name in jersf_names})
-        #resosfs = resosf.getScaleFactor(JetEta=test_eta) 
-        #print(list(resosfs))
-        
-        junc_names = ['Summer16_23Sep2016V3_MC_Uncertainty_AK4PFPuppi']
+
+        junc_names = ['{0}_Uncertainty_AK4PFchs'.format(jec_tag)]
         #levels = []
         if do_factorized_jec_unc:
             for name in dir(evaluator):
-                if 'Summer16_23Sep2016V3_MC_UncertaintySources_AK4PFPuppi' in name:
+
+                #factorized sources
+                if '{0}_UncertaintySources_AK4PFchs'.format(jec_tag) in name:
                     junc_names.append(name)
-                    #levels.append(name.split('_')[-1])
+
         self.jesunc = JetCorrectionUncertainty(**{name: evaluator[name] for name in junc_names})
-        #juncs = junc.getUncertainty(JetEta=test_eta, JetPt=test_pt)
-        #juncs = list(juncs)
 
 if __name__ == "__main__":
 
@@ -407,9 +426,49 @@ if __name__ == "__main__":
             ["IsoMu24_PtEtaBins/pt_abseta_ratio"],
             [1.0]
         ),
-     }
-    jetmet_corrections = JetMetCorrections()
+    }
 
+    #JEC files copied from
+    #https://github.com/cms-jet/JECDatabase/tree/master/textFiles
+    #Need to rename JECDatabase files as follows:
+    #  *_UncertaintySources_AK4PFchs.txt -> *_UncertaintySources_AK4PFchs.junc.txt
+    #  *_Uncertainty_AK4PFchs.txt -> *_Uncertainty_AK4PFchs.junc.txt
+    #  *_PtResolution_AK4PFchs.txt -> *_PtResolution_AK4PFchs.jr.txt
+    #  *_SF_AK4PFchs.txt -> *_SF_AK4PFchs.jersf.txt
+    jetmet_corrections = {
+        "2016": JetMetCorrections(
+            jec_tag="Summer16_23Sep2016V4_MC",
+            jec_tag_data={
+                "RunB": "Summer16_23Sep2016BCDV4_DATA",
+                "RunC": "Summer16_23Sep2016BCDV4_DATA",
+                "RunD": "Summer16_23Sep2016BCDV4_DATA",
+                "RunE": "Summer16_23Sep2016EFV4_DATA",
+                "RunF": "Summer16_23Sep2016EFV4_DATA",
+                "RunG": "Summer16_23Sep2016GV4_DATA",
+                "RunH": "Summer16_23Sep2016HV4_DATA",
+            },
+            jer_tag="Spring16_25nsV10_MC"),
+        "2017": JetMetCorrections(
+            jec_tag="Fall17_17Nov2017_V6_MC",
+            jec_tag_data={
+#                "RunA": "Fall17_17Nov2017A_V6_DATA", #does not exist
+                "RunB": "Fall17_17Nov2017B_V6_DATA",
+                "RunC": "Fall17_17Nov2017C_V6_DATA",
+                "RunD": "Fall17_17Nov2017D_V6_DATA",
+                "RunE": "Fall17_17Nov2017E_V6_DATA",
+                "RunF": "Fall17_17Nov2017F_V6_DATA",
+            },
+            jer_tag="Spring16_25nsV10_MC"), #FIXME
+        "2018": JetMetCorrections(
+            jec_tag="Autumn18_V15_MC",
+            jec_tag_data={
+                "RunA": "Autumn18_RunA_V15_DATA",
+                "RunB": "Autumn18_RunB_V15_DATA",
+                "RunC": "Autumn18_RunC_V15_DATA",
+                "RunD": "Autumn18_RunD_V15_DATA",
+            },
+            jer_tag="Spring16_25nsV10_MC"), #FIXME
+    }
     #Run baseline analysis
     outpath = "{0}/baseline".format(args.out)
     try:
@@ -425,7 +484,7 @@ if __name__ == "__main__":
         filename = 'analysis.prof'
         yappi.set_clock_type('cpu')
         yappi.start(builtins=True)
-   
+
     #disable GPU for tensorflow
     if not args.use_cuda: 
         os.environ["CUDA_VISIBLE_DEVICES"]="-1"
