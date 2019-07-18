@@ -38,7 +38,7 @@ NUMPY_LIB = None
 genweight_scalefactor = 0.00001
 
 #Use these to turn on debugging
-debug = True
+debug = False
 debug_event_ids = []
 
 data_runs = {
@@ -1811,6 +1811,9 @@ def create_datastructure(is_mc, dataset_era):
         ]
         datastructures["GenPart"] = [
             ("GenPart_pt", "float32"),
+            ("GenPart_eta", "float32"),
+            ("GenPart_phi", "float32"),
+            ("GenPart_pdgId", "int32"),
         ]
         datastructures["Jet"] += [
             ("Jet_genJetIdx", "int32")
