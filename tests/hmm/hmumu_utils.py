@@ -124,6 +124,7 @@ def analyze_data(
 
     #associate the muon genpt to reco muons based on the NanoAOD index
     genJet = None
+    genpart = None
     if is_mc:
         genJet = data["GenJet"]
         genpart = data["GenPart"]
@@ -246,6 +247,10 @@ def analyze_data(
     
     # Get the invariant mass of the dimuon system and compute mass windows
     inv_mass = compute_inv_mass(muons, ret_mu["selected_events"], ret_mu["selected_muons"])
+    #FIXME: check this
+    inv_mass[NUMPY_LIB.isnan(inv_mass)] = 0
+    inv_mass[NUMPY_LIB.isinf(inv_mass)] = 0
+
     masswindow_70_110 = ((inv_mass >= 70) & (inv_mass < 110))
     masswindow_110_150 = ((inv_mass >= 110) & (inv_mass < 150))
     masswindow_120_130 = ((inv_mass >= 120) & (inv_mass < 130))
@@ -333,7 +338,8 @@ def analyze_data(
 
         #Assign the final analysis discriminator based on category
         scalars["final_discriminator"] = NUMPY_LIB.zeros_like(inv_mass)
-        ha.copyto_dst_masked(scalars["final_discriminator"], dnn_prediction, dnn_presel)
+        inds_nonzero = NUMPY_LIB.nonzero(dnn_presel)[0]
+        ha.copyto_dst_indices(scalars["final_discriminator"], dnn_prediction, inds_nonzero)
         scalars["final_discriminator"][category != 5] = 0
 
         #Add some additional debugging info to the DNN training ntuples
@@ -524,9 +530,6 @@ def analyze_data(
                             jet_syst_name, dnn_vars[varname], weights_dnn,
                             (ret_mu["selected_events"] & massbin_msk & msk_cat)[dnn_presel], NUMPY_LIB.linspace(*hb))
 
-
-
-
     #end of jet systematic loop
 
     # Collect results
@@ -669,11 +672,11 @@ def run_analysis(
                 nev_total += sum([md["numevents"] for md in ret["cache_metadata"]])
                 nev_loaded += nev
                 num_processed += 1
+                gc.collect()
             print()
 
             #clean up threads
             threadk.set_tokill(True)
-            gc.collect()
 
             #save output
             ret = sum(rets, Results({}))
@@ -1393,10 +1396,11 @@ def dnn_variables(leading_muon, subleading_muon, leading_jet, subleading_jet, ns
         "Higgs_eta": mm_sph["eta"],
     }
 
-    for k in ret.keys():
-        msk = NUMPY_LIB.isnan(ret[k])
-        if NUMPY_LIB.sum(msk) > 0:
-            print("dnn vars nan", k, np.sum(msk))
+    if debug:
+        for k in ret.keys():
+            msk = NUMPY_LIB.isnan(ret[k])
+            if NUMPY_LIB.sum(msk) > 0:
+                print("dnn vars nan", k, np.sum(msk))
 
     return ret
 
@@ -1489,27 +1493,34 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
         #compute and apply jet corrections
         if is_mc:
             corr = jetmet_corrections.jec_mc.getCorrection(JetPt=raw_pt, Rho=rho, JetEta=eta, JetA=area)
-            print("mc corr", corr)
         else:
             final_corr = NUMPY_LIB.zeros_like(jets.pt)
 
             #final correction is run-dependent, compute that for each run separately
             for run_idx in NUMPY_LIB.unique(scalars["run_index"]):
+                
+                if use_cuda:
+                    run_idx = int(run_idx)
                 msk = scalars["run_index"] == run_idx
                 
                 #find the jets in the events that pass this run index cut
                 jets_msk = NUMPY_LIB.zeros(jets.numobjects(), dtype=NUMPY_LIB.bool)
                 ha.broadcast(msk, jets.offsets, jets_msk)
+                inds_nonzero = NUMPY_LIB.nonzero(jets_msk)[0]
 
+                #Evaluate jet correction (on CPU only currently)
+                if use_cuda:
+                    jets_msk = NUMPY_LIB.asnumpy(jets_msk)
                 run_name = runmap_numerical_r[run_idx]
-                corr = jetmet_corrections.jec_data[run_name].getCorrection(JetPt=raw_pt, Rho=rho, JetEta=eta, JetA=area)
+                corr = jetmet_corrections.jec_data[run_name].getCorrection(
+                    JetPt=raw_pt[jets_msk], Rho=rho[jets_msk], JetEta=eta[jets_msk], JetA=area[jets_msk])
                 if debug:
                     print("run_idx=", run_idx, corr.mean(), corr.std())
 
                 #update the final jet correction for the jets in the events in this run
-                ha.copyto_dst_masked(final_corr, corr, jets_msk)
-
-            print("data corr", corr)
+                ha.copyto_dst_indices(final_corr, corr, inds_nonzero)
+            corr = final_corr
+	
         corr = NUMPY_LIB.array(corr)
         pt_jec = NUMPY_LIB.array(raw_pt) * corr 
         mass_jec = raw_mass * corr
