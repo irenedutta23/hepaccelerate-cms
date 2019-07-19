@@ -9,7 +9,7 @@ NTHREADS=16
 MAXFILES=-1
 
 #Set to 1 to run analysis on GPU, 0 for debugging
-export HEPACCELERATE_CUDA=1
+export HEPACCELERATE_CUDA=0
 
 #This is where the intermediate analysis files will be saved and loaded from
 #As long as one person produces it, other people can run it

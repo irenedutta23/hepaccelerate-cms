@@ -299,7 +299,7 @@ if __name__ == "__main__":
             "do_rochester_corrections": True,
             "do_lepton_sf": True,
             
-            "do_jec": False, 
+            "do_jec": True, 
             "jet_mu_dr": 0.4,
             "jet_pt": {"2016": 25.0, "2017": 30.0, "2018": 30.0},
             "jet_eta": 4.7,

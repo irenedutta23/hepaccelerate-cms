@@ -94,7 +94,11 @@ def create_variated_histos(hdict, baseline="nominal", variations=["puWeight", "j
     for variation in variations:
         for vdir in ["up", "down"]:
             sname = "{0}__{1}".format(variation, vdir)
-            ret[sname] = hdict.get(sname, hbase)
+            if sname.endswith("__up"):
+                sname2 = sname.replace("__up", "Up")
+            elif sname.endswith("__down"):
+                sname2 = sname.replace("__down", "Down")
+            ret[sname2] = hdict.get(sname, hbase)
     return ret
 
 def create_datacard(dict_procs, parameter_name, processes, signal_processes, histname, baseline, variations):
@@ -315,7 +319,7 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
     #shapename_base = shapename.split(".")[0]
     dcof.write("\n")
     dcof.write("# Execute with:\n")
-    dcof.write("# combine -n {0} -M Asymptotic -t -1 {1} \n".format(cat.full_name, ofname))
+    dcof.write("# combine -n {0} -M FitDiagnostics -t -1 {1} \n".format(cat.full_name, os.path.basename(ofname)))
 
 def make_pdf_plot(args):
     res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir = args
@@ -360,12 +364,14 @@ def make_pdf_plot(args):
 if __name__ == "__main__":
 
     from multiprocessing import Pool
-    pool = Pool(4)
+    pool = Pool(12)
 
     #in picobarns
     #from https://docs.google.com/presentation/d/1OMnGnSs8TIiPPVOEKV8EbWS8YBgEsoMH0r0Js5v5tIQ/edit#slide=id.g3f663e4489_0_20
     cross_sections = {
         "dy": 5765.4,
+        "dy_m105_160": 46.9479,
+        "dy_m105_160_vbf": 2.02,
         "ggh": 0.009605,
         "vbf": 0.000823,
         "ttjets_dl": 85.656,
@@ -386,7 +392,7 @@ if __name__ == "__main__":
         weight_xs = {}
         datacard_args = []
         
-        dd = "out/baseline" 
+        dd = "/storage/user/jpata/hmm/forIrene/2019_07_18/validation/baseline" 
         outdir = "out/baseline/plots/{0}".format(era)
         outdir_datacards = "out/baseline/datacards/{0}".format(era)
         try:
@@ -400,12 +406,13 @@ if __name__ == "__main__":
 
         #mc_samples = ["vbf", "ggh", "wz_1l1nu2q", "wz_3lnu", "wz_2l2q", "ww_2l2nu", "zz", "ttjets_dl", "ttjets_sl", "dy"]
         mc_samples = ["ggh", "dy"]
+        mc_samples_combine = ["ggh", "dy", "dy_m105_160", "dy_m105_160_vbf"]
         signal_samples = ["vbf", "ggh"]
 
         shape_systematics = ["jes", "jer", "puWeight"]
 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
-        for mc_samp in mc_samples:
+        for mc_samp in mc_samples_combine:
             res[mc_samp] = json.load(open(dd + "/{0}_{1}.json".format(mc_samp, era)))
 
         #in inverse picobarns
@@ -431,7 +438,7 @@ if __name__ == "__main__":
                 create_datacard_combine(
                     res,
                     analysis,
-                    ["data"] + mc_samples,
+                    ["data"] + mc_samples_combine,
                     signal_samples,
                     var,
                     "nominal",
