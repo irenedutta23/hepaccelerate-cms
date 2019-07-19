@@ -1,6 +1,3 @@
-#ifndef CommonTools_MVAUtils_GBRForestTools_h
-#define CommonTools_MVAUtils_GBRForestTools_h
-
 //--------------------------------------------------------------------------------------------------
 //
 // GRBForestTools
@@ -42,5 +39,3 @@ extern "C" {
       }
     }
 }
-
-#endif

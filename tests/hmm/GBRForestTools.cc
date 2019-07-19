@@ -11,6 +11,7 @@
 
 #include "GBRTree.h"
 #include "GBRForest.h"
+#include "GBRForestTools.h"
 #include "tinyxml2.h"
 
 bool hasEnding (std::string const &fullString, std::string const &ending) {
@@ -142,8 +143,10 @@ std::unique_ptr<T> make_unique(Args&&... args) {
     tinyxml2::XMLElement* root = xmlDoc.FirstChildElement("MethodSetup");
     readVariables(root->FirstChildElement("Variables"), "Variable", varNames);
 
-    std::cout << "BDT inititalized with " << varNames.size() << " variables" << std::endl;
-
+    std::cout << "BDT from file " << weightsFileFullPath << " inititalized with " << varNames.size() << " variables" << std::endl;
+    for (auto v : varNames) {
+      std::cout << "BDT var=" << v << std::endl;
+    }
     // Read in the TMVA general info
     std::map<std::string, std::string> info;
     tinyxml2::XMLElement* infoElem = xmlDoc.FirstChildElement("MethodSetup")->FirstChildElement("GeneralInfo");
