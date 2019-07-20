@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from hepaccelerate.utils import Histogram
+from hepaccelerate.utils import Histogram, Results
 
 from collections import OrderedDict
 import uproot
@@ -89,8 +89,8 @@ def create_variated_histos(hdict, baseline="nominal", variations=["puWeight", "j
     if not baseline in hdict.keys():
         raise KeyError("baseline histogram missing")
     hbase = hdict[baseline]
-    ret = OrderedDict()
-    ret["nominal"] = hbase
+    ret = Results(OrderedDict())
+    ret["nominal"] = Histogram.from_dict(hbase)
     for variation in variations:
         for vdir in ["up", "down"]:
             sname = "{0}__{1}".format(variation, vdir)
@@ -98,24 +98,41 @@ def create_variated_histos(hdict, baseline="nominal", variations=["puWeight", "j
                 sname2 = sname.replace("__up", "Up")
             elif sname.endswith("__down"):
                 sname2 = sname.replace("__down", "Down")
-            ret[sname2] = hdict.get(sname, hbase)
+            ret[sname2] = Histogram.from_dict(hdict.get(sname, hbase))
     return ret
 
-def create_datacard(dict_procs, parameter_name, processes, signal_processes, histname, baseline, variations):
-    ret = OrderedDict()
-    for proc in processes:
+def create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs):
+    ret = Results(OrderedDict())
+    event_counts = {} 
+    for proc in all_processes:
         rr = dict_procs[proc][parameter_name][histname]
         _variations = variations
         if proc == "data":
             _variations = []
         vr = create_variated_histos(rr, baseline, _variations)
         for k, v in vr.items():
+           
+            if proc != "data":
+                v = v * weight_xs[proc]       
+
+            if k == "nominal":
+                if not (proc in event_counts):
+                    event_counts[proc] = 0
+                event_counts[proc] += np.sum(v.contents)
+                print(proc, k, np.sum(v.contents))
+
             rk = "{0}__{2}".format(proc, histname, k)
+
             if rk == "data__nominal":
-                rk = "data_obs"
+                rk = "data"
             rk = rk.replace("__nominal", "")
-            ret[rk] = v
-    return ret
+
+            if not (rk in ret):
+                ret[rk] = v
+            else:
+                ret[rk] += v
+
+    return ret, event_counts
 
 def save_datacard(dc, outfile):
     fi = uproot.recreate(outfile)
@@ -124,26 +141,35 @@ def save_datacard(dc, outfile):
     fi.close()
 
 def create_datacard_combine(
-    dict_procs, parameter_name, processes, signal_processes, histname, baseline, variations, txtfile_name):
+    dict_procs, parameter_name,
+    all_processes,
+    signal_processes,
+    histname, baseline,
+    weight_xs,
+    variations,
+    common_scale_uncertainties,
+    scale_uncertainties,
+    txtfile_name
+    ):
     
-    dc = create_datacard(dict_procs, parameter_name, processes, signal_processes, histname, baseline, variations)
+    dc, event_counts = create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs)
     rootfile_name = txtfile_name.replace(".txt", ".root")
     
     save_datacard(dc, rootfile_name)
-    
-    processes.pop(processes.index("data"))
+ 
+    all_processes.pop(all_processes.index("data"))
+
     shape_uncertainties = {v: 1.0 for v in variations}
     cat = Category(
         name=histname,
-        processes=processes, signal_processes=signal_processes,
-        common_shape_uncertainties=shape_uncertainties)
+        processes=list(all_processes),
+        signal_processes=signal_processes,
+        common_shape_uncertainties=shape_uncertainties,
+        common_scale_uncertainties=common_scale_uncertainties,
+        scale_uncertainties=scale_uncertainties,
+     )
     
     categories = [cat]
-    event_counts = {}
-    for cat in categories:
-        event_counts[cat.full_name] = {}
-        for proc in cat.processes:
-            event_counts[cat.full_name][proc] = np.sum(dict_procs[proc][parameter_name][histname][baseline]["contents"])
 
     filenames = {}
     for cat in categories:
@@ -154,9 +180,9 @@ def create_datacard_combine(
 from uproot_methods.classes.TH1 import from_numpy
 
 def to_th1(hdict, name):
-    content = np.array(hdict["contents"])
-    content_w2 = np.array(hdict["contents_w2"])
-    edges = np.array(hdict["edges"])
+    content = np.array(hdict.contents)
+    content_w2 = np.array(hdict.contents_w2)
+    edges = np.array(hdict.edges)
     
     #remove inf/nan just in case
     content[np.isinf(content)] = 0
@@ -169,9 +195,9 @@ def to_th1(hdict, name):
     centers = (edges[:-1] + edges[1:]) / 2.0
     th1 = from_numpy((content, edges))
     th1._fName = name
-    th1._fSumw2 = np.array(hdict["contents_w2"])
-    th1._fTsumw2 = np.array(hdict["contents_w2"]).sum()
-    th1._fTsumwx2 = np.array(hdict["contents_w2"] * centers).sum()
+    th1._fSumw2 = np.array(hdict.contents_w2)
+    th1._fTsumw2 = np.array(hdict.contents_w2).sum()
+    th1._fTsumwx2 = np.array(hdict.contents_w2 * centers).sum()
 
     return th1
 
@@ -182,7 +208,6 @@ class Category:
         self.rebin = kwargs.get("rebin", 1)
         self.do_limit = kwargs.get("do_limit", True)
 
-        self.scale_uncertainties = kwargs.get("scale_uncertainties", {})
 
         self.cuts = kwargs.get("cuts", [])
 
@@ -209,6 +234,12 @@ class Category:
         self.proc_shape_uncertainties = kwargs.get("shape_uncertainties", {})
         for proc, v in self.proc_shape_uncertainties.items():
             self.shape_uncertainties[proc].update(v)
+        
+        self.proc_scale_uncertainties = kwargs.get("scale_uncertainties", {})
+        for proc, v in self.proc_scale_uncertainties.items():
+            if not (proc in self.scale_uncertainties):
+                self.scale_uncertainties[proc] = {}
+            self.scale_uncertainties[proc].update(v)
 
 def PrintDatacard(categories, event_counts, filenames, ofname):
     dcof = open(ofname, "w")
@@ -217,18 +248,22 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
     number_of_backgrounds = 0
     
     backgrounds = []    
+    signals = []    
     for cat in categories:
         for proc in cat.processes:
-            if proc not in cat.signal_processes:
+            if (proc in cat.signal_processes):
+                signals += [proc]
+            else:
                 backgrounds += [proc]
     
     backgrounds = set(backgrounds)
+    signals = set(signals)
     number_of_backgrounds = len(backgrounds)
+    number_of_signals = len(signals)
     analysis_categories = list(set([c.full_name for c in categories]))
 
-
     dcof.write("imax {0}\n".format(number_of_bins))
-    dcof.write("jmax {0}\n".format(number_of_backgrounds))
+    dcof.write("jmax {0}\n".format(number_of_backgrounds + number_of_signals - 1))
     dcof.write("kmax *\n")
     dcof.write("---------------\n")
 
@@ -258,7 +293,7 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
             if sample in cat.signal_processes:
                 i_sample = -i_sample
             processes_1.append(str(i_sample))
-            rates.append("{0:.2f}".format(event_counts[cat.full_name][sample]))
+            rates.append("{0}".format(event_counts[sample]))
     
     #Write process lines (names and IDs)
     dcof.write("bin\t"+"\t".join(bins)+"\n")
@@ -363,15 +398,14 @@ def make_pdf_plot(args):
 
 if __name__ == "__main__":
 
-    from multiprocessing import Pool
-    pool = Pool(12)
-
     #in picobarns
     #from https://docs.google.com/presentation/d/1OMnGnSs8TIiPPVOEKV8EbWS8YBgEsoMH0r0Js5v5tIQ/edit#slide=id.g3f663e4489_0_20
     cross_sections = {
         "dy": 5765.4,
-        "dy_m105_160": 46.9479,
-        "dy_m105_160_vbf": 2.02,
+        "dy_m105_160_mg": 46.9479,
+        "dy_m105_160_vbf_mg": 2.02,
+        "dy_m105_160_amc": 41.81,
+        "dy_m105_160_vbf_amc": 41.81*0.0425242,
         "ggh": 0.009605,
         "vbf": 0.000823,
         "ttjets_dl": 85.656,
@@ -380,19 +414,60 @@ if __name__ == "__main__":
         "wz_3lnu":  4.42965,
         "wz_2l2q": 5.595,
         "wz_1l1nu2q": 11.61,
-        "zz": 16.523
+        "zz": 16.523,
+        "st_top": 136.02,
+        "st_t_antitop": 80.95,
+        "st_tw_top": 35.85,
+        "st_tw_antitop": 35.85,
+        "ewk_lljj_mll105_160": 0.0508896, 
     }
 
     import json
 
+    mc_samples_combine = [
+#        "ggh",
+        "vbf",
+        #"wz_1l1nu2q",
+#        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
+#        "ewk_lljj_mll105_160",
+#        #"st_top",
+#        #"st_t_antitop",
+#        "st_tw_top",
+#        "st_tw_antitop",
+#        "ttjets_sl", "ttjets_dl",
+        "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+        "dy"
+    ]
+    signal_samples = ["ggh", "vbf"]
+    shape_systematics = ["jes", "jer", "puWeight"]
+    common_scale_uncertainties = {
+        "lumi": 1.025,
+    }
+    scale_uncertainties = {
+        "ww_2l2nu": {"VVxsec": 1.10},
+        "wz_3lnu": {"VVxsec": 1.10},
+        "wz_2l2q": {"VVxsec": 1.10},
+        "wz_2l2q": {"VVxsec": 1.10},
+        "zz": {"VVxsec": 1.10},
+        "wjets": {"WJetsxsec": 1.10},
+        "dy_m105_160_amc": {"DYxsec": 1.10},
+        "dy_m105_160__vbf_amc": {"DYxsec": 1.10},
+        "ttjets_sl": {"TTxsec": 1.05},
+        "ttjets_dl": {"TTxsec": 1.05},
+        "st_t_top": {"STxsec": 1.05},
+        "st_t_antitop": {"STxsec": 1.05},
+        "st_tw_top": {"STxsec": 1.05},
+        "st_tw_antitop": {"STxsec": 1.05},
+    }        
 
-    for era in ["2016", "2017", "2018"]:
+    #for era in ["2016", "2017", "2018"]:
+    for era in ["2016"]:
         res = {}
         genweights = {}
         weight_xs = {}
         datacard_args = []
         
-        dd = "/storage/user/jpata/hmm/forIrene/2019_07_18/validation/baseline" 
+        dd = "out/baseline" 
         outdir = "out/baseline/plots/{0}".format(era)
         outdir_datacards = "out/baseline/datacards/{0}".format(era)
         try:
@@ -404,12 +479,6 @@ if __name__ == "__main__":
         except FileExistsError as e:
             pass
 
-        #mc_samples = ["vbf", "ggh", "wz_1l1nu2q", "wz_3lnu", "wz_2l2q", "ww_2l2nu", "zz", "ttjets_dl", "ttjets_sl", "dy"]
-        mc_samples = ["ggh", "dy"]
-        mc_samples_combine = ["ggh", "dy", "dy_m105_160", "dy_m105_160_vbf"]
-        signal_samples = ["vbf", "ggh"]
-
-        shape_systematics = ["jes", "jer", "puWeight"]
 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
         for mc_samp in mc_samples_combine:
@@ -418,20 +487,15 @@ if __name__ == "__main__":
         #in inverse picobarns
         int_lumi = res["data"]["baseline"]["int_lumi"]
 
-        for mc_samp in mc_samples:
+        for mc_samp in mc_samples_combine:
             genweights[mc_samp] = res[mc_samp]["gen_sumweights"]
             weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
             print(mc_samp, genweights[mc_samp], cross_sections[mc_samp])
-        print(genweights)
+        print(era, int_lumi, weight_xs)
 
         for analysis in ["baseline"]:
-            for var in [k for k in res["ggh"][analysis].keys() if k.startswith("hist_")]:
-            #for var in [
-            #    "hist__dimuon__inv_mass",
-            #    "hist__dimuon__leading_muon_pt",
-            #    #"hist__dimuon__subleading_muon_pt",
-            #    #"hist__dimuon__npvs"
-            #    ]:
+            #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
+            for var in ["hist__dimuon_invmass_70_110__numjet"]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
 
@@ -442,7 +506,10 @@ if __name__ == "__main__":
                     signal_samples,
                     var,
                     "nominal",
+                    weight_xs,
                     shape_systematics,
+                    common_scale_uncertainties,
+                    scale_uncertainties,
                     outdir_datacards + "/{0}.txt".format(var)
                 )
 
@@ -455,5 +522,5 @@ if __name__ == "__main__":
                     except KeyError:
                         print("Histogram {0} not found for data, skipping".format(var))
                         continue
-                    datacard_args += [(res, hdata, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir)]
-        ret = list(pool.map(make_pdf_plot, datacard_args))
+                    datacard_args += [(res, hdata, mc_samples_combine, analysis, var, weight, weight_xs, int_lumi, outdir)]
+        ret = list(map(make_pdf_plot, datacard_args))
