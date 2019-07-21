@@ -37,7 +37,7 @@ NUMPY_LIB = None
 genweight_scalefactor = 1
 
 #Use these to turn on debugging
-debug = False
+debug = True
 debug_event_ids = []
 
 data_runs = {
@@ -174,8 +174,9 @@ def analyze_data(
 
     if is_mc:
         weights["nominal"] = weights["nominal"] * scalars["genWeight"] * genweight_scalefactor
-        print("mean genWeight=", scalars["genWeight"].mean())
-        print("sum genWeight=", scalars["genWeight"].sum())
+        if debug:
+            print("mean genWeight=", scalars["genWeight"].mean())
+            print("sum genWeight=", scalars["genWeight"].sum())
         pu_weights, pu_weights_up, pu_weights_down = compute_pu_weights(
             pu_corrections[dataset_era],
             weights["nominal"],
@@ -191,9 +192,6 @@ def analyze_data(
         weights["puWeight__up"] = weights["nominal"] * pu_weights_up
         weights["puWeight__down"] = weights["nominal"] * pu_weights_down
         weights["nominal"] = weights["nominal"] * pu_weights
-        if (weights["nominal"].mean() < 100):
-            print("Large average weights for sample {0}".format(dataset_name))
-    
 
     #Apply Rochester corrections to leading and subleading muon momenta
     if parameters["do_rochester_corrections"]:
@@ -267,7 +265,7 @@ def analyze_data(
     fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass, leading_muon, subleading_muon, parameters, masswindow_110_150, masswindow_120_130, NUMPY_LIB)
 
     #Apply JEC, create a dictionary of variated jet momenta
-    jet_pt_syst = apply_jec(jets, scalars, parameters, jetmet_corrections[dataset_era], NUMPY_LIB, use_cuda, is_mc)
+    jet_pt_syst = apply_jec(jets, scalars, parameters, jetmet_corrections[dataset_era][parameters["jec_tag"][dataset_era]], NUMPY_LIB, use_cuda, is_mc)
 
     # Loop over all jet momentum variations and do analysis that depends on jets
     for jet_syst_name, jet_pt_vec in jet_pt_syst.items():
@@ -340,49 +338,53 @@ def analyze_data(
 
             mask_out = NUMPY_LIB.ones_like(mask_dijet_genmass)
             mask_out[mask_2gj & NUMPY_LIB.invert(mask_dijet_genmass)] = False
-            print("sample", dataset_name, "numev", len(mask_out), "2gj", mask_2gj.sum(), "2gj&&mjj", (mask_2gj&mask_dijet_genmass).sum(), "out", mask_out.sum()) 
+            if debug:
+                print("sample", dataset_name, "numev", len(mask_out), "2gj", mask_2gj.sum(), "2gj&&mjj", (mask_2gj&mask_dijet_genmass).sum(), "out", mask_out.sum()) 
             dnn_presel = dnn_presel & mask_out
 
         #Compute the DNN inputs, the DNN output, fill the DNN input and output variable histograms
         hists_dnn = {}
-        dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
-            scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
-            weights_selected, hists_dnn)
+        dnn_prediction = None
+        #dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
+        #    scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
+        #    weights_selected, hists_dnn)
 
         #Assign the final analysis discriminator based on category
         scalars["final_discriminator"] = NUMPY_LIB.zeros_like(inv_mass)
-        inds_nonzero = NUMPY_LIB.nonzero(dnn_presel)[0]
-        ha.copyto_dst_indices(scalars["final_discriminator"], dnn_prediction, inds_nonzero)
-        scalars["final_discriminator"][category != 5] = 0
+        if dnn_prediction:
+            inds_nonzero = NUMPY_LIB.nonzero(dnn_presel)[0]
+            if len(inds_nonzero) > 0:
+                ha.copyto_dst_indices(scalars["final_discriminator"], dnn_prediction, inds_nonzero)
+            scalars["final_discriminator"][category != 5] = 0
 
-        #Add some additional debugging info to the DNN training ntuples
-        dnn_vars["cat_index"] = category[dnn_presel]
-        dnn_vars["run"] = scalars["run"][dnn_presel]
-        dnn_vars["lumi"] = scalars["luminosityBlock"][dnn_presel]
-        dnn_vars["event"] = scalars["event"][dnn_presel]
-        dnn_vars["Higgs_mass"] = inv_mass[dnn_presel]
-        #if is_mc:
-        #    dnn_vars["dijet_inv_mass_gen"] = ret_jet["dijet_inv_mass_gen"][dnn_presel]
-        #    hists["hist__dijet_inv_mass_gen"] = {"nominal": get_histogram(
-        #        ret_jet["dijet_inv_mass_gen"][ret_mu["selected_events"]],
-        #        weights["nominal"][ret_mu["selected_events"]], NUMPY_LIB.linspace(0,500,101)
-        #    )}
+            #Add some additional debugging info to the DNN training ntuples
+            dnn_vars["cat_index"] = category[dnn_presel]
+            dnn_vars["run"] = scalars["run"][dnn_presel]
+            dnn_vars["lumi"] = scalars["luminosityBlock"][dnn_presel]
+            dnn_vars["event"] = scalars["event"][dnn_presel]
+            dnn_vars["Higgs_mass"] = inv_mass[dnn_presel]
+            #if is_mc:
+            #    dnn_vars["dijet_inv_mass_gen"] = ret_jet["dijet_inv_mass_gen"][dnn_presel]
+            #    hists["hist__dijet_inv_mass_gen"] = {"nominal": get_histogram(
+            #        ret_jet["dijet_inv_mass_gen"][ret_mu["selected_events"]],
+            #        weights["nominal"][ret_mu["selected_events"]], NUMPY_LIB.linspace(0,500,101)
+            #    )}
 
-        #Save the DNN training ntuples as npy files
-        if save_dnn_vars and jet_syst_name[0] == "nominal":
-            dnn_vars_np = {k: NUMPY_LIB.asnumpy(v) for k, v in dnn_vars.items()}
-            if is_mc:
-                dnn_vars_np["genweight"] = NUMPY_LIB.asnumpy(scalars["genWeight"][dnn_presel])
-            arrs = []
-            names = []
-            for k, v in dnn_vars_np.items():
-                arrs += [v]
-                names += [k]
-            arrdata = np.core.records.fromarrays(arrs, names=names)
-            outpath = "{0}/{1}".format(parameters["dnn_vars_path"], dataset_era) 
-            if not os.path.isdir(outpath):
-                os.makedirs(outpath)
-            np.save("{0}/{1}_{2}.npy".format(outpath, dataset_name, dataset_num_chunk), arrdata, allow_pickle=False)
+            #Save the DNN training ntuples as npy files
+            if save_dnn_vars and jet_syst_name[0] == "nominal":
+                dnn_vars_np = {k: NUMPY_LIB.asnumpy(v) for k, v in dnn_vars.items()}
+                if is_mc:
+                    dnn_vars_np["genweight"] = NUMPY_LIB.asnumpy(scalars["genWeight"][dnn_presel])
+                arrs = []
+                names = []
+                for k, v in dnn_vars_np.items():
+                    arrs += [v]
+                    names += [k]
+                arrdata = np.core.records.fromarrays(arrs, names=names)
+                outpath = "{0}/{1}".format(parameters["dnn_vars_path"], dataset_era) 
+                if not os.path.isdir(outpath):
+                    os.makedirs(outpath)
+                np.save("{0}/{1}_{2}.npy".format(outpath, dataset_name, dataset_num_chunk), arrdata, allow_pickle=False)
 
         #Put the DNN histograms into the result dictionary
         for k, v in hists_dnn.items():
@@ -619,7 +621,10 @@ def run_analysis(
  
         print("Processing dataset {0}_{1}".format(datasetname, dataset_era))
         if maxfiles[dataset_era] > 0:
-            filenames_all = filenames_all[:maxfiles[dataset_era]]
+            mf = maxfiles[dataset_era]
+            if datasetname == "data":
+                mf = 10*mf
+            filenames_all = filenames_all[:mf]
 
         datastructure = create_datastructure(is_mc, dataset_era)
 
@@ -1084,24 +1089,23 @@ def compute_pu_weights(pu_corrections_target, weights, mc_nvtx, reco_nvtx):
 
     src_pu_hist = get_histogram(mc_nvtx, weights, pu_edges)
     norm = sum(src_pu_hist.contents)
-    src_pu_hist.contents = src_pu_hist.contents/norm
-    src_pu_hist.contents_w2 = src_pu_hist.contents_w2/norm
+    values_target = src_pu_hist.contents/norm
 
-    ratio = values_nom / src_pu_hist.contents
+    ratio = values_nom / values_target
     remove_inf_nan(ratio)
     pu_weights = NUMPY_LIB.zeros_like(weights)
     ha.get_bin_contents(reco_nvtx, NUMPY_LIB.array(pu_edges),
         NUMPY_LIB.array(ratio), pu_weights)
     fix_large_weights(pu_weights) 
      
-    ratio_up = values_up / src_pu_hist.contents
+    ratio_up = values_up / values_target
     remove_inf_nan(ratio_up)
     pu_weights_up = NUMPY_LIB.zeros_like(weights)
     ha.get_bin_contents(reco_nvtx, NUMPY_LIB.array(pu_edges),
         NUMPY_LIB.array(ratio_up), pu_weights_up)
     fix_large_weights(pu_weights_up) 
     
-    ratio_down = values_down / src_pu_hist.contents
+    ratio_down = values_down / values_target
     remove_inf_nan(ratio_down)
     pu_weights_down = NUMPY_LIB.zeros_like(weights)
     ha.get_bin_contents(reco_nvtx, NUMPY_LIB.array(pu_edges),
@@ -1544,7 +1548,8 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
                     print("run_idx=", run_idx, corr.mean(), corr.std())
 
                 #update the final jet correction for the jets in the events in this run
-                ha.copyto_dst_indices(final_corr, corr, inds_nonzero)
+                if len(inds_nonzero) > 0:
+                    ha.copyto_dst_indices(final_corr, corr, inds_nonzero)
             corr = final_corr
 	
         corr = NUMPY_LIB.array(corr)
@@ -1554,20 +1559,25 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
         
         #JER and JEC uncertainty
         if is_mc:
-            resos = jetmet_corrections.jer.getResolution(JetEta=eta, Rho=rho, JetPt=NUMPY_LIB.asnumpy(pt_jec))
-            resosfs = jetmet_corrections.jersf.getScaleFactor(JetEta=eta) 
-            resos = NUMPY_LIB.array(resos)
-            resosfs = NUMPY_LIB.array(resosfs)
+            if jetmet_corrections.jer:
+                resos = jetmet_corrections.jer.getResolution(JetEta=eta, Rho=rho, JetPt=NUMPY_LIB.asnumpy(pt_jec))
+                resosfs = jetmet_corrections.jersf.getScaleFactor(JetEta=eta) 
+                resos = NUMPY_LIB.array(resos)
+                resosfs = NUMPY_LIB.array(resosfs)
 
-            #NB: this smearing needs to be modified to take into account a matched genjet and the case where the data reso
-            #is better than MC reso: https://github.com/cms-nanoAOD/nanoAOD-tools/blob/master/python/postprocessing/modules/jme/jetSmearer.py
-            jer_smear = resos * NUMPY_LIB.random.normal(size=len(pt_jec))
-            jer_smear_central = 1 + NUMPY_LIB.sqrt(resosfs[:, 0]  ** 2 - 1.0) * jer_smear
-            jer_smear_up = 1 + NUMPY_LIB.sqrt(resosfs[:, 1]  ** 2 - 1.0) * jer_smear
-            jer_smear_down = 1 + NUMPY_LIB.sqrt(resosfs[:, 2]  ** 2 - 1.0) * jer_smear
-            pt_jec_jer_central = pt_jec * jer_smear_central
-            pt_jec_jer_up = pt_jec * jer_smear_up
-            pt_jec_jer_down = pt_jec * jer_smear_down
+                #NB: this smearing needs to be modified to take into account a matched genjet and the case where the data reso
+                #is better than MC reso: https://github.com/cms-nanoAOD/nanoAOD-tools/blob/master/python/postprocessing/modules/jme/jetSmearer.py
+                jer_smear = resos * NUMPY_LIB.random.normal(size=len(pt_jec))
+                jer_smear_central = 1 + NUMPY_LIB.sqrt(resosfs[:, 0]  ** 2 - 1.0) * jer_smear
+                jer_smear_up = 1 + NUMPY_LIB.sqrt(resosfs[:, 1]  ** 2 - 1.0) * jer_smear
+                jer_smear_down = 1 + NUMPY_LIB.sqrt(resosfs[:, 2]  ** 2 - 1.0) * jer_smear
+                pt_jec_jer_central = pt_jec * jer_smear_central
+                pt_jec_jer_up = pt_jec * jer_smear_up
+                pt_jec_jer_down = pt_jec * jer_smear_down
+            else:
+                pt_jec_jer_central = pt_jec
+                pt_jec_jer_up = pt_jec
+                pt_jec_jer_down = pt_jec
 
             jet_pt_syst[("nominal", "")] = pt_jec_jer_central
             jet_pt_syst[("nanoaod", "")] = NUMPY_LIB.array(jets.pt)

@@ -9,6 +9,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+import copy
+
 def histstep(ax, edges, contents, **kwargs):
     ymins = []
     ymaxs = []
@@ -85,53 +87,75 @@ def mask_inv_mass(hist):
     hist["contents"][bin_idx1:bin_idx2] = 0.0
     hist["contents_w2"][bin_idx1:bin_idx2] = 0.0
 
-def create_variated_histos(hdict, baseline="nominal", variations=["puWeight", "jes", "jer"]):
+def create_variated_histos(
+    hdict,
+    baseline="nominal",
+    variations=["puWeight", "jes", "jer"]):
+ 
     if not baseline in hdict.keys():
         raise KeyError("baseline histogram missing")
-    hbase = hdict[baseline]
+    
+    hbase = copy.deepcopy(hdict[baseline])
     ret = Results(OrderedDict())
     ret["nominal"] = Histogram.from_dict(hbase)
     for variation in variations:
         for vdir in ["up", "down"]:
+            print("create_variated_histos", variation, vdir)
             sname = "{0}__{1}".format(variation, vdir)
             if sname.endswith("__up"):
                 sname2 = sname.replace("__up", "Up")
             elif sname.endswith("__down"):
                 sname2 = sname.replace("__down", "Down")
-            ret[sname2] = Histogram.from_dict(hdict.get(sname, hbase))
+
+            if sname not in hdict:
+                print("systematic", sname, "not found, taking baseline") 
+                hret = hbase
+            else:
+                hret = hdict[sname]
+            if np.sum(hret["contents"]) == 0:
+                import pdb;pdb.set_trace() 
+            ret[sname2] = Histogram.from_dict(hret)
     return ret
 
 def create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs):
     ret = Results(OrderedDict())
     event_counts = {} 
     for proc in all_processes:
+        print("create_datacard", proc)
         rr = dict_procs[proc][parameter_name][histname]
         _variations = variations
+
+        #don't produce variated histograms for data
         if proc == "data":
             _variations = []
-        vr = create_variated_histos(rr, baseline, _variations)
-        for k, v in vr.items():
-           
+
+        variated_histos = create_variated_histos(rr, baseline, _variations)
+
+        for syst_name, histo in variated_histos.items():
             if proc != "data":
-                v = v * weight_xs[proc]       
+                if weight_xs[proc] == 0:
+                    import pdb;pdb.set_trace() 
+                histo = histo * weight_xs[proc]       
 
-            if k == "nominal":
-                if not (proc in event_counts):
-                    event_counts[proc] = 0
-                event_counts[proc] += np.sum(v.contents)
-                print(proc, k, np.sum(v.contents))
+            if syst_name == "nominal":
 
-            rk = "{0}__{2}".format(proc, histname, k)
+                if (proc in event_counts):
+                    import pdb;pdb.set_trace() 
+                event_counts[proc] = np.sum(histo.contents)
+                print(proc, syst_name, np.sum(histo.contents))
+                if np.sum(histo.contents) < 0.00000001:
+                    print("abnormally small mc", np.sum(histo.contents), np.sum(variated_histos["nominal"].contents))
 
-            if rk == "data__nominal":
-                rk = "data"
-            rk = rk.replace("__nominal", "")
-
-            if not (rk in ret):
-                ret[rk] = v
-            else:
-                ret[rk] += v
-
+            #create histogram name for combine datacard
+            hist_name = "{0}__{2}".format(proc, histname, syst_name)
+            if hist_name == "data__nominal":
+                hist_name = "data"
+            hist_name = hist_name.replace("__nominal", "")
+            
+            if hist_name in ret:
+                import pdb;pdb.set_trace()
+            ret[hist_name] = copy.deepcopy(histo)
+    
     return ret, event_counts
 
 def save_datacard(dc, outfile):
@@ -431,7 +455,8 @@ if __name__ == "__main__":
         "ggh",
         "vbf",
         #"wz_1l1nu2q",
-        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
+        #"wz_3lnu",
+        "ww_2l2nu", "wz_2l2q", "zz",
         "ewk_lljj_mll105_160",
 #        #"st_top",
 #        #"st_t_antitop",
@@ -444,7 +469,8 @@ if __name__ == "__main__":
         "ggh",
         "vbf",
         #"wz_1l1nu2q",
-        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
+        #"wz_3lnu", 
+        "ww_2l2nu", "wz_2l2q", "zz",
         "ewk_lljj_mll105_160",
 #        #"st_top",
 #        #"st_t_antitop",
@@ -474,51 +500,50 @@ if __name__ == "__main__":
         "st_t_antitop": {"STxsec": 1.05},
         "st_tw_top": {"STxsec": 1.05},
         "st_tw_antitop": {"STxsec": 1.05},
-    }        
+    }
+
 
     #for era in ["2016", "2017", "2018"]:
-    for era in ["2016"]:
+    for era in ["2018"]:
         res = {}
         genweights = {}
         weight_xs = {}
         datacard_args = []
         
-        dd = "out/baseline" 
-        outdir = "out/baseline/plots/{0}".format(era)
-        outdir_datacards = "out/baseline/datacards/{0}".format(era)
-        try:
-            os.makedirs(outdir)
-        except FileExistsError as e:
-            pass
-        try:
-            os.makedirs(outdir_datacards)
-        except FileExistsError as e:
-            pass
-
-
+        analyses = ["baseline", "jec_V15", "jec_V16"]
+        analysis = "baseline"
+        dd = "out3/{0}".format(analysis) 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
         for mc_samp in mc_samples_load:
             res[mc_samp] = json.load(open(dd + "/{0}_{1}.json".format(mc_samp, era)))
 
-        #in inverse picobarns
-        int_lumi = res["data"]["baseline"]["int_lumi"]
+        for analysis in analyses:
+            print("processing analysis {0}".format(analysis))
+            outdir = "out3/{0}/plots/{1}".format(analysis, era)
+            outdir_datacards = "out3/{0}/datacards/{1}".format(analysis, era)
+            try:
+                os.makedirs(outdir)
+            except FileExistsError as e:
+                pass
+            try:
+                os.makedirs(outdir_datacards)
+            except FileExistsError as e:
+                pass
 
-        for mc_samp in mc_samples_load:
-            genweights[mc_samp] = res[mc_samp]["genEventSumw"]
-            weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
-            print(mc_samp, genweights[mc_samp], cross_sections[mc_samp])
-        print(era, int_lumi, weight_xs)
+            #in inverse picobarns
+            int_lumi = res["data"]["baseline"]["int_lumi"]
+            for mc_samp in mc_samples_load:
+                genweights[mc_samp] = res[mc_samp]["genEventSumw"]
+                weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
 
-        for analysis in ["baseline"]:
             #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
-            for var in ["hist__dimuon_invmass_110_150_cat5__leading_jet_pt", "hist__dimuon_invmass_70_110__inv_mass"]:
+            for var in ["hist__dimuon_invmass_70_110_cat5__leading_jet_pt"]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
-                if var == "hist__dimuon_invmass_110_150_cat5__leading_jet_pt":
+                if "110_150" in var:
                     mc_samples = mc_samples_combine_H
-                elif var == "hist__dimuon_invmass_70_110__inv_mass":
+                elif "70_110" in var:
                     mc_samples = mc_samples_combine_Z
-
                 create_datacard_combine(
                     res,
                     analysis,

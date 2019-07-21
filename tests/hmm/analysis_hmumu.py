@@ -33,8 +33,9 @@ def parse_args():
     parser.add_argument('--cache-location', action='store', help='Cache location', default='./mycache', type=str)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
     parser.add_argument('--era', action='append', help='Dataset eras to process', type=str, required=True)
+    parser.add_argument('--datasets', action='append', help='Dataset names process', type=str, required=False)
     parser.add_argument('--pinned', action='store_true', help='Use CUDA pinned memory')
-    parser.add_argument('--do-sync', action='store_true', help='Run only synchronization datasets')
+    parser.add_argument('--do-sync', action='store_true', help='run only synchronization datasets')
     args = parser.parse_args()
     return args
 
@@ -225,9 +226,12 @@ class JetMetCorrections:
             '* * data/jme/{0}_L3Absolute_AK4PFchs.txt'.format(jec_tag),
             '* * data/jme/{0}_UncertaintySources_AK4PFchs.junc.txt'.format(jec_tag),
             '* * data/jme/{0}_Uncertainty_AK4PFchs.junc.txt'.format(jec_tag),
+        ])
+
+        if jer_tag:
+            extract.add_weight_sets([
             '* * data/jme/{0}_PtResolution_AK4PFchs.jr.txt'.format(jer_tag),
             '* * data/jme/{0}_SF_AK4PFchs.jersf.txt'.format(jer_tag)])
-
         #For data, make sure we don't duplicate
         tags_done = []
         for run, tag in jec_tag_data.items():
@@ -259,13 +263,14 @@ class JetMetCorrections:
             self.jec_data[run] = FactorizedJetCorrector(**{name: evaluator[name] for name in jec_names_data})
 
         self.jec_mc = FactorizedJetCorrector(**{name: evaluator[name] for name in jec_names_mc})
-        
-        jer_names = ['{0}_PtResolution_AK4PFchs'.format(jer_tag)]
-        self.jer = JetResolution(**{name: evaluator[name] for name in jer_names})
-
-            
-        jersf_names = ['{0}_SF_AK4PFchs'.format(jer_tag)]
-        self.jersf = JetResolutionScaleFactor(**{name: evaluator[name] for name in jersf_names})
+      
+        self.jer = None 
+        self.jersf = None 
+        if jer_tag: 
+            jer_names = ['{0}_PtResolution_AK4PFchs'.format(jer_tag)]
+            self.jer = JetResolution(**{name: evaluator[name] for name in jer_names})
+            jersf_names = ['{0}_SF_AK4PFchs'.format(jer_tag)]
+            self.jersf = JetResolutionScaleFactor(**{name: evaluator[name] for name in jersf_names})
 
         junc_names = ['{0}_Uncertainty_AK4PFchs'.format(jec_tag)]
         #levels = []
@@ -302,8 +307,9 @@ if __name__ == "__main__":
     datasets_to_process = []
     for ds in datasets:
         if ds[1] in args.era:
-            datasets_to_process += [ds]
-            print("Will process dataset", ds)
+            if args.datasets is None or ds[0] in args.datasets:
+                datasets_to_process += [ds]
+                print("Will process dataset", ds)
     datasets = datasets_to_process
 
     hmumu_utils.NUMPY_LIB, hmumu_utils.ha = choose_backend(args.use_cuda)
@@ -376,10 +382,11 @@ if __name__ == "__main__":
             "muon_id": {"2016": "medium", "2017": "medium", "2018": "medium"},
             "muon_trigger_match_dr": 0.1,
             
-            "do_rochester_corrections": False, 
-            "do_lepton_sf": False,
+            "do_rochester_corrections": True, 
+            "do_lepton_sf": True,
             
-            "do_jec": False, 
+            "do_jec": False,
+            "jec_tag": {"2016": "Summer16_23Sep2016V4", "2017": "Fall17_17Nov2017_V6", "2018": "Autumn18_V15"}, 
             "jet_mu_dr": 0.4,
             "jet_pt": {"2016": 25.0, "2017": 30.0, "2018": 30.0},
             "jet_eta": 4.7,
@@ -439,7 +446,12 @@ if __name__ == "__main__":
         },
     }
 
-    #analysis_parameters["baseline"]["categorization_trees"].update(rand_trees)
+    analysis_parameters["jec_V15"] = copy.deepcopy(analysis_parameters["baseline"])
+    analysis_parameters["jec_V15"]["do_jec"] = True
+    
+    analysis_parameters["jec_V16"] = copy.deepcopy(analysis_parameters["baseline"])
+    analysis_parameters["jec_V16"]["do_jec"] = True
+    analysis_parameters["jec_V16"]["jec_tag"]["2018"] = "Autumn18_V16"
 
     lumimask = {
         "2016": LumiMask("data/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt", np, backend_cpu),
@@ -522,38 +534,56 @@ if __name__ == "__main__":
     #  *_PtResolution_AK4PFchs.txt -> *_PtResolution_AK4PFchs.jr.txt
     #  *_SF_AK4PFchs.txt -> *_SF_AK4PFchs.jersf.txt
     jetmet_corrections = {
-        "2016": JetMetCorrections(
-            jec_tag="Summer16_23Sep2016V4_MC",
-            jec_tag_data={
-                "RunB": "Summer16_23Sep2016BCDV4_DATA",
-                "RunC": "Summer16_23Sep2016BCDV4_DATA",
-                "RunD": "Summer16_23Sep2016BCDV4_DATA",
-                "RunE": "Summer16_23Sep2016EFV4_DATA",
-                "RunF": "Summer16_23Sep2016EFV4_DATA",
-                "RunG": "Summer16_23Sep2016GV4_DATA",
-                "RunH": "Summer16_23Sep2016HV4_DATA",
-            },
-            jer_tag="Spring16_25nsV10_MC"),
-        "2017": JetMetCorrections(
-            jec_tag="Fall17_17Nov2017_V6_MC",
-            jec_tag_data={
-#                "RunA": "Fall17_17Nov2017A_V6_DATA", #does not exist
-                "RunB": "Fall17_17Nov2017B_V6_DATA",
-                "RunC": "Fall17_17Nov2017C_V6_DATA",
-                "RunD": "Fall17_17Nov2017D_V6_DATA",
-                "RunE": "Fall17_17Nov2017E_V6_DATA",
-                "RunF": "Fall17_17Nov2017F_V6_DATA",
-            },
-            jer_tag="Spring16_25nsV10_MC"), #FIXME
-        "2018": JetMetCorrections(
-            jec_tag="Autumn18_V15_MC",
-            jec_tag_data={
-                "RunA": "Autumn18_RunA_V15_DATA",
-                "RunB": "Autumn18_RunB_V15_DATA",
-                "RunC": "Autumn18_RunC_V15_DATA",
-                "RunD": "Autumn18_RunD_V15_DATA",
-            },
-            jer_tag="Spring16_25nsV10_MC"), #FIXME
+        "2016": {
+            "Summer16_23Sep2016V4":
+                JetMetCorrections(
+                jec_tag="Summer16_23Sep2016V4_MC",
+                jec_tag_data={
+                    "RunB": "Summer16_23Sep2016BCDV4_DATA",
+                    "RunC": "Summer16_23Sep2016BCDV4_DATA",
+                    "RunD": "Summer16_23Sep2016BCDV4_DATA",
+                    "RunE": "Summer16_23Sep2016EFV4_DATA",
+                    "RunF": "Summer16_23Sep2016EFV4_DATA",
+                    "RunG": "Summer16_23Sep2016GV4_DATA",
+                    "RunH": "Summer16_23Sep2016HV4_DATA",
+                },
+                jer_tag=None),
+        },
+        "2017": {
+            "Fall17_17Nov2017_V6":
+                JetMetCorrections(
+                jec_tag="Fall17_17Nov2017_V6_MC",
+                jec_tag_data={
+                    "RunB": "Fall17_17Nov2017B_V6_DATA",
+                    "RunC": "Fall17_17Nov2017C_V6_DATA",
+                    "RunD": "Fall17_17Nov2017D_V6_DATA",
+                    "RunE": "Fall17_17Nov2017E_V6_DATA",
+                    "RunF": "Fall17_17Nov2017F_V6_DATA",
+                },
+                jer_tag=None),
+        },
+        "2018": {
+            "Autumn18_V15":
+                JetMetCorrections(
+                jec_tag="Autumn18_V15_MC",
+                jec_tag_data={
+                    "RunA": "Autumn18_RunA_V15_DATA",
+                    "RunB": "Autumn18_RunB_V15_DATA",
+                    "RunC": "Autumn18_RunC_V15_DATA",
+                    "RunD": "Autumn18_RunD_V15_DATA",
+                },
+                jer_tag=None),
+            "Autumn18_V16":
+                JetMetCorrections(
+                jec_tag="Autumn18_V16_MC",
+                jec_tag_data={
+                    "RunA": "Autumn18_RunA_V16_DATA",
+                    "RunB": "Autumn18_RunB_V16_DATA",
+                    "RunC": "Autumn18_RunC_V16_DATA",
+                    "RunD": "Autumn18_RunD_V16_DATA",
+                },
+                jer_tag=None),
+        }
     }
     #Run baseline analysis
     outpath = "{0}/baseline".format(args.out)
