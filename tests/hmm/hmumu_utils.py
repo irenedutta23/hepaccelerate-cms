@@ -37,7 +37,7 @@ NUMPY_LIB = None
 genweight_scalefactor = 1
 
 #Use these to turn on debugging
-debug = True
+debug = False
 debug_event_ids = []
 
 data_runs = {
@@ -128,11 +128,19 @@ def analyze_data(
         genJet = data["GenJet"]
         genpart = data["GenPart"]
         muons_genpt = NUMPY_LIB.zeros(muons.numobjects(), dtype=NUMPY_LIB.float32)
+        jets_genpt = NUMPY_LIB.zeros(jets.numobjects(), dtype=NUMPY_LIB.float32)
+        jets_genmass = NUMPY_LIB.zeros(jets.numobjects(), dtype=NUMPY_LIB.float32)
         if not use_cuda:
-            muons_get_genpt_cpu(muons.offsets, muons.genPartIdx, genpart.offsets, genpart.pt, muons_genpt)
+            get_genpt_cpu(muons.offsets, muons.genPartIdx, genpart.offsets, genpart.pt, muons_genpt)
+            get_genpt_cpu(jets.offsets, jets.genJetIdx, genJet.offsets, genJet.pt, jets_genpt)
+            get_genpt_cpu(jets.offsets, jets.genJetIdx, genJet.offsets, genJet.mass, jets_genmass)
         else:
-            muons_get_genpt_cuda[32,1024](muons.offsets, muons.genPartIdx, genpart.offsets, genpart.pt, muons_genpt)
+            get_genpt_cuda[32,1024](muons.offsets, muons.genPartIdx, genpart.offsets, genpart.pt, muons_genpt)
+            get_genpt_cuda[32,1024](jets.offsets, jets.genJetIdx, genJet.offsets, genJet.pt, jets_genpt)
+            get_genpt_cuda[32,1024](jets.offsets, jets.genJetIdx, genJet.offsets, genJet.mass, jets_genmass)
         muons.attrs_data["genpt"] = muons_genpt
+        jets.attrs_data["genpt"] = jets_genpt
+        jets.attrs_data["genmass"] = jets_genmass
 
     #assign a numerical flag to each data event that corresponds to the data era
     if not is_mc:
@@ -474,6 +482,28 @@ def analyze_data(
                 "hist__dimuon_invmass_{0}__leading_muon_pt".format(massbin_name),
                 jet_syst_name, leading_muon["pt"], weights_selected,
                 dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}__subleading_muon_pt".format(massbin_name),
+                jet_syst_name, subleading_muon["pt"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}__numjet".format(massbin_name),
+                jet_syst_name, ret_jet["num_jets"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 10, 11))
+
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}_jge1__leading_jet_pt".format(massbin_name),
+                jet_syst_name, leading_jet["pt"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
+
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}_jge1__subleading_jet_pt".format(massbin_name),
+                jet_syst_name, subleading_jet["pt"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
 
             #if jet_syst_name[0] == "nominal":
             #    update_histograms_systematic(
@@ -515,6 +545,12 @@ def analyze_data(
                     jet_syst_name, leading_jet["pt"], weights_selected,
                     dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
                 
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
+                    jet_syst_name, subleading_jet["pt"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+              
                 #update_histograms_systematic(
                 #    hists,
                 #    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
@@ -1219,16 +1255,31 @@ def rochester_correction_muon_qterm(
 # Custom kernels to get the pt of the muon based on the matched genPartIdx of the reco muon
 # Implement them here as they are too specific to NanoAOD for the hepaccelerate library
 @numba.njit(parallel=True, fastmath=True)
-def muons_get_genpt_cpu(muons_offsets, muons_genPartIdx, genparts_offsets, genparts_pt, out_muons_genpt):
+def get_genpt_cpu(reco_offsets, reco_genPartIdx, genparts_offsets, genparts_pt, out_reco_genpt):
     #loop over events
-    for iev in numba.prange(len(muons_offsets) - 1):
+    for iev in numba.prange(len(reco_offsets) - 1):
         #loop over muons
-        for imu in range(muons_offsets[iev], muons_offsets[iev + 1]):
-            #get index of genparticle that muon was matched to
-            idx_gp = muons_genPartIdx[imu]
+        for imu in range(reco_offsets[iev], reco_offsets[iev + 1]):
+            #get index of genparticle that reco particle was matched to
+            idx_gp = reco_genPartIdx[imu]
             if idx_gp >= 0:
                 genpt = genparts_pt[genparts_offsets[iev] + idx_gp]
-                out_muons_genpt[imu] = genpt
+                out_reco_genpt[imu] = genpt
+
+@cuda.jit
+def get_genpt_cuda(reco_offsets, reco_genPartIdx, genparts_offsets, genparts_pt, out_reco_genpt):
+    #loop over events
+    xi = cuda.grid(1)
+    xstride = cuda.gridsize(1)
+    
+    for iev in range(xi, len(reco_offsets) - 1, xstride):
+        #loop over muons
+        for imu in range(reco_offsets[iev], reco_offsets[iev + 1]):
+            #get index of genparticle that reco particle was matched to
+            idx_gp = reco_genPartIdx[imu]
+            if idx_gp >= 0:
+                genpt = genparts_pt[genparts_offsets[iev] + idx_gp]
+                out_reco_genpt[imu] = genpt
 
 @numba.njit(parallel=True, fastmath=True)
 def get_matched_genparticles(reco_offsets, reco_genPartIdx, mask_reco, genparts_offsets, out_genparts_mask):
@@ -1260,21 +1311,6 @@ def get_matched_genparticles_kernel(reco_offsets, reco_genPartIdx, mask_reco, ge
             if idx_gp_ev >= 0:
                 idx_gp = int(genparts_offsets[iev]) + int(idx_gp_ev)
                 out_genparts_mask[idx_gp] = True
- 
-@cuda.jit
-def muons_get_genpt_cuda(muons_offsets, muons_genPartIdx, genparts_offsets, genparts_pt, out_muons_genpt):
-    #loop over events
-    xi = cuda.grid(1)
-    xstride = cuda.gridsize(1)
-    
-    for iev in range(xi, len(muons_offsets) - 1, xstride):
-        #loop over muons
-        for imu in range(muons_offsets[iev], muons_offsets[iev + 1]):
-            #get index of genparticle that muon was matched to
-            idx_gp = muons_genPartIdx[imu]
-            if idx_gp >= 0:
-                genpt = genparts_pt[genparts_offsets[iev] + idx_gp]
-                out_muons_genpt[imu] = genpt
 
 
 def to_cartesian(arrs):
@@ -1488,6 +1524,46 @@ def compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model, scalars, leadi
         )
     return dnn_vars, dnn_pred, weights_dnn
 
+def get_jer_smearfactors(pt_or_m, ratio_jet_genjet, msk_no_genjet, msk_poor_reso, resos, resosfs):
+    
+    #smearing for matched jets
+    smear_matched_n = 1.0 + (resosfs[:, 0] - 1.0) * ratio_jet_genjet
+    smear_matched_u = 1.0 + (resosfs[:, 1] - 1.0) * ratio_jet_genjet
+    smear_matched_d = 1.0 + (resosfs[:, 2] - 1.0) * ratio_jet_genjet
+
+    #compute random smearing for unmatched jets
+    sigma_unmatched_n = resos * NUMPY_LIB.sqrt(NUMPY_LIB.clip(resosfs[:, 0]**2 - 1.0, 0, 100))
+    sigma_unmatched_u = resos * NUMPY_LIB.sqrt(NUMPY_LIB.clip(resosfs[:, 1]**2 - 1.0, 0, 100))
+    sigma_unmatched_d = resos * NUMPY_LIB.sqrt(NUMPY_LIB.clip(resosfs[:, 2]**2 - 1.0, 0, 100))
+
+    zeros = NUMPY_LIB.ones_like(sigma_unmatched_n)
+    rand = NUMPY_LIB.random.normal(loc=zeros, scale=resos, size=len(zeros))
+    
+    smear_rnd_n = 1. + rand * NUMPY_LIB.sqrt(resosfs[:, 0]**2 - 1.)
+    smear_rnd_u = 1. + rand * NUMPY_LIB.sqrt(resosfs[:, 1]**2 - 1.)
+    smear_rnd_d = 1. + rand * NUMPY_LIB.sqrt(resosfs[:, 2]**2 - 1.)
+
+    inds_no_genjet = NUMPY_LIB.nonzero(msk_no_genjet)[0]
+
+    smear_n = NUMPY_LIB.array(smear_matched_n)
+    smear_u = NUMPY_LIB.array(smear_matched_u)
+    smear_d = NUMPY_LIB.array(smear_matched_d)
+
+    #for jets that have no matched genjet, use random smearing
+    ha.copyto_dst_indices(smear_n, smear_rnd_n[msk_no_genjet], inds_no_genjet)
+    ha.copyto_dst_indices(smear_u, smear_rnd_u[msk_no_genjet], inds_no_genjet)
+    ha.copyto_dst_indices(smear_d, smear_rnd_d[msk_no_genjet], inds_no_genjet)
+
+    smear_n[msk_no_genjet & (resosfs[:, 0]<1.0)] = 1
+    smear_u[msk_no_genjet & (resosfs[:, 1]<1.0)] = 1
+    smear_d[msk_no_genjet & (resosfs[:, 2]<1.0)] = 1
+
+    smear_n[(smear_n * pt_or_m) < 0.01] = 0.01
+    smear_u[(smear_u * pt_or_m) < 0.01] = 0.01
+    smear_d[(smear_d * pt_or_m) < 0.01] = 0.01
+
+    return smear_n, smear_u, smear_d, sigma_unmatched_n
+
 def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda, is_mc):
     # Change rho from a per-event variable to per-jet by broadcasting the
     # value of each event to all the jets in the event
@@ -1505,7 +1581,7 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
         rho = NUMPY_LIB.asnumpy(jets_rho)
         area = NUMPY_LIB.asnumpy(jets.area)
     else:
-        pt = raw_pt
+        raw_pt = raw_pt
         eta = jets.eta
         rho = jets_rho
         area = jets.area
@@ -1522,7 +1598,7 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
     if parameters["do_jec"]:
         #compute and apply jet corrections
         if is_mc:
-            corr = jetmet_corrections.jec_mc.getCorrection(JetPt=raw_pt, Rho=rho, JetEta=eta, JetA=area)
+            corr = jetmet_corrections.jec_mc.getCorrection(JetPt=raw_pt.copy(), Rho=rho, JetEta=eta, JetA=area)
         else:
             final_corr = NUMPY_LIB.zeros_like(jets.pt)
 
@@ -1543,7 +1619,7 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
                     jets_msk = NUMPY_LIB.asnumpy(jets_msk)
                 run_name = runmap_numerical_r[run_idx]
                 corr = jetmet_corrections.jec_data[run_name].getCorrection(
-                    JetPt=raw_pt[jets_msk], Rho=rho[jets_msk], JetEta=eta[jets_msk], JetA=area[jets_msk])
+                    JetPt=raw_pt[jets_msk].copy(), Rho=rho[jets_msk], JetEta=eta[jets_msk], JetA=area[jets_msk])
                 if debug:
                     print("run_idx=", run_idx, corr.mean(), corr.std())
 
@@ -1560,48 +1636,71 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
         #JER and JEC uncertainty
         if is_mc:
             if jetmet_corrections.jer:
-                resos = jetmet_corrections.jer.getResolution(JetEta=eta, Rho=rho, JetPt=NUMPY_LIB.asnumpy(pt_jec))
-                resosfs = jetmet_corrections.jersf.getScaleFactor(JetEta=eta) 
+
+                #This is done only on CPU
+                resos = jetmet_corrections.jer.getResolution(
+                    JetEta=eta, Rho=rho, JetPt=NUMPY_LIB.asnumpy(pt_jec))
+                resosfs = jetmet_corrections.jersf.getScaleFactor(JetEta=eta)
+
+                #The following is done either on CPU or GPU
                 resos = NUMPY_LIB.array(resos)
                 resosfs = NUMPY_LIB.array(resosfs)
 
-                #NB: this smearing needs to be modified to take into account a matched genjet and the case where the data reso
-                #is better than MC reso: https://github.com/cms-nanoAOD/nanoAOD-tools/blob/master/python/postprocessing/modules/jme/jetSmearer.py
-                jer_smear = resos * NUMPY_LIB.random.normal(size=len(pt_jec))
-                jer_smear_central = 1 + NUMPY_LIB.sqrt(resosfs[:, 0]  ** 2 - 1.0) * jer_smear
-                jer_smear_up = 1 + NUMPY_LIB.sqrt(resosfs[:, 1]  ** 2 - 1.0) * jer_smear
-                jer_smear_down = 1 + NUMPY_LIB.sqrt(resosfs[:, 2]  ** 2 - 1.0) * jer_smear
-                pt_jec_jer_central = pt_jec * jer_smear_central
-                pt_jec_jer_up = pt_jec * jer_smear_up
-                pt_jec_jer_down = pt_jec * jer_smear_down
+                dpt_jet_genjet = jets.pt - jets.genpt
+                dpt_jet_genjet[jets.genpt == 0] = 0
+                ratio_jet_genjet_pt = dpt_jet_genjet / jets.pt
+
+                msk_no_genjet = ratio_jet_genjet_pt == 0
+                msk_poor_reso = resosfs[:, 0] < 1
+
+                dm_jet_genjet = jets.mass - jets.genmass
+                dm_jet_genjet[jets.genmass == 0] = 0
+                ratio_jet_genjet_mass = dm_jet_genjet / jets.mass
+               
+                smear_n, smear_u, smear_d, sigma_unmatched_n = get_jer_smearfactors(
+                    jets.pt, ratio_jet_genjet_pt, msk_no_genjet, msk_poor_reso, resos, resosfs)
+                # mass_smear_n, mass_smear_u, mass_smear_d = get_jer_smearfactors(
+                #     jets.mass, ratio_jet_genjet_mass, msk_no_genjet, msk_poor_reso, resosfs)
+
+                pt_jec_jer = pt_jec * smear_n
+                pt_jec_jer_up = pt_jec * smear_u
+                pt_jec_jer_down = pt_jec * smear_d
+
+                # mass_jec_jer_central = mass_jec * mass_smear_n
+                # mass_jec_jer_up = mass_jec * mass_smear_u
+                # mass_jec_jer_down = mass_jec * mass_smear_d
+
             else:
-                pt_jec_jer_central = pt_jec
+                pt_jec_jer = pt_jec
                 pt_jec_jer_up = pt_jec
                 pt_jec_jer_down = pt_jec
 
-            jet_pt_syst[("nominal", "")] = pt_jec_jer_central
-            jet_pt_syst[("nanoaod", "")] = NUMPY_LIB.array(jets.pt)
+                # mass_jec_jer = mass_jec
+                # mass_jec_jer_up = mass_jec
+                # mass_jec_jer_down = mass_jec
 
-            jesunc = dict(list(jetmet_corrections.jesunc.getUncertainty(JetPt=NUMPY_LIB.array(pt_jec_jer_central), JetEta=jets.eta))) 
+            jet_pt_syst[("nominal", "")] = pt_jec_jer
+            jet_pt_syst[("nanoaod", "")] = NUMPY_LIB.array(jets.pt)
+            jet_pt_syst[("jec", "")] = pt_jec
+
+            jesunc = dict(list(jetmet_corrections.jesunc.getUncertainty(JetPt=NUMPY_LIB.array(pt_jec_jer), JetEta=jets.eta))) 
 
             jet_pt_syst[("jer", "up")] = pt_jec_jer_up
             jet_pt_syst[("jer", "down")] = pt_jec_jer_down
 
-            #add variated jet momenta, but lazily as callable functions to save GPU memory
+            #add variated jet momenta
             for unc_name, arr in jesunc.items():
-                jet_pt_syst[(unc_name, "up")] = lambda pt_jec_jer_central=pt_jec_jer_central, name=unc_name: pt_jec_jer_central * NUMPY_LIB.array(jesunc[name][:, 0])
-                jet_pt_syst[(unc_name, "down")] = lambda pt_jec_jer_central=pt_jec_jer_central, name=unc_name: pt_jec_jer_central * NUMPY_LIB.array(jesunc[name][:, 1]) 
+                jet_pt_syst[(unc_name, "up")] = pt_jec_jer * NUMPY_LIB.array(jesunc[unc_name][:, 0])
+                jet_pt_syst[(unc_name, "down")] = pt_jec_jer * NUMPY_LIB.array(jesunc[ unc_name][:, 1]) 
 
-    if debug:
+    if debug and is_mc:
         print("variated jet pt")
         for unc_name in jet_pt_syst.keys():
-            if callable(jet_pt_syst[unc_name]):
-                arr = jet_pt_syst[unc_name]()
-            else:
-                arr = jet_pt_syst[unc_name]
-            diff = jets.pt - arr
-            print(unc_name, "Nano - X", diff.mean(), diff.std())
-
+            arr = jet_pt_syst[unc_name]
+            diff = arr - jets.pt
+            print("wrt NanoAOD", unc_name, diff.mean(), diff.std())
+        import pdb;pdb.set_trace()
+        
     #dictionary of variated jet momenta
     return jet_pt_syst
 

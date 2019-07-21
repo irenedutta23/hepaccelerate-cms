@@ -456,27 +456,28 @@ if __name__ == "__main__":
         "vbf",
         #"wz_1l1nu2q",
         #"wz_3lnu",
-        "ww_2l2nu", "wz_2l2q", "zz",
-        "ewk_lljj_mll105_160",
-#        #"st_top",
-#        #"st_t_antitop",
-        "st_tw_top",
-        "st_tw_antitop",
-        "ttjets_sl", "ttjets_dl",
-        "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+       "ww_2l2nu", "wz_2l2q", "zz",
+       "ewk_lljj_mll105_160",
+       #"st_top",
+       #"st_t_antitop",
+       "st_tw_top",
+       "st_tw_antitop",
+       "ttjets_sl", "ttjets_dl",
+#       "dy_m105_160_amc", "dy_m105_160_vbf_amc",
     ]
+
     mc_samples_combine_Z = [
         "ggh",
         "vbf",
         #"wz_1l1nu2q",
         #"wz_3lnu", 
-        "ww_2l2nu", "wz_2l2q", "zz",
-        "ewk_lljj_mll105_160",
-#        #"st_top",
-#        #"st_t_antitop",
-        "st_tw_top",
-        "st_tw_antitop",
-        "ttjets_sl", "ttjets_dl",
+       "ww_2l2nu", "wz_2l2q", "zz",
+       "ewk_lljj_mll105_160",
+       #"st_top",
+       #"st_t_antitop",
+       "st_tw_top",
+       "st_tw_antitop",
+       "ttjets_sl", "ttjets_dl",
         "dy_0j", "dy_1j", "dy_2j",
     ]
     mc_samples_load = list(set(mc_samples_combine_H + mc_samples_combine_Z))
@@ -510,17 +511,19 @@ if __name__ == "__main__":
         weight_xs = {}
         datacard_args = []
         
-        analyses = ["baseline", "jec_V15", "jec_V16"]
         analysis = "baseline"
-        dd = "out3/{0}".format(analysis) 
+        input_folder = "out3"
+        dd = "{0}/{1}".format(input_folder, analysis) 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
         for mc_samp in mc_samples_load:
             res[mc_samp] = json.load(open(dd + "/{0}_{1}.json".format(mc_samp, era)))
 
+        analyses = [k for k in res["data"].keys() if not k in ["cache_metadata", "num_events"]]
+
         for analysis in analyses:
             print("processing analysis {0}".format(analysis))
-            outdir = "out3/{0}/plots/{1}".format(analysis, era)
-            outdir_datacards = "out3/{0}/datacards/{1}".format(analysis, era)
+            outdir = "{0}/{1}/plots/{2}".format(input_folder, analysis, era)
+            outdir_datacards = "{0}/{1}/datacards/{2}".format(input_folder, analysis, era)
             try:
                 os.makedirs(outdir)
             except FileExistsError as e:
@@ -537,7 +540,12 @@ if __name__ == "__main__":
                 weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
 
             #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
-            for var in ["hist__dimuon_invmass_70_110_cat5__leading_jet_pt"]:
+            for var in [
+                "hist__dimuon_invmass_70_110_cat5__leading_jet_pt",
+                "hist__dimuon_invmass_70_110__leading_muon_pt",
+                "hist__dimuon_invmass_70_110_jge1__leading_jet_pt",
+                "hist__dimuon_invmass_70_110__numjet",
+                ]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
                 if "110_150" in var:
