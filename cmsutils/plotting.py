@@ -45,7 +45,7 @@ def plot_hist_ratio(hists_mc, hist_data):
     hmc_tot2 = np.zeros_like(hist_data.contents)
     for h in hists_mc:
         plot_hist_step(ax1, h.edges, hmc_tot + h.contents,
-            hmc_tot2 + np.sqrt(h.contents_w2),
+            np.sqrt(hmc_tot2 + h.contents_w2),
             kwargs_step={"label": getattr(h, "label", None)}
         )
         hmc_tot += h.contents
@@ -402,6 +402,9 @@ if __name__ == "__main__":
     #from https://docs.google.com/presentation/d/1OMnGnSs8TIiPPVOEKV8EbWS8YBgEsoMH0r0Js5v5tIQ/edit#slide=id.g3f663e4489_0_20
     cross_sections = {
         "dy": 5765.4,
+        "dy_0j": 4620.52,
+        "dy_1j": 859.59,
+        "dy_2j": 338.26,
         "dy_m105_160_mg": 46.9479,
         "dy_m105_160_vbf_mg": 2.02,
         "dy_m105_160_amc": 41.81,
@@ -424,20 +427,33 @@ if __name__ == "__main__":
 
     import json
 
-    mc_samples_combine = [
-#        "ggh",
+    mc_samples_combine_H = [
+        "ggh",
         "vbf",
         #"wz_1l1nu2q",
-#        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
-#        "ewk_lljj_mll105_160",
+        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
+        "ewk_lljj_mll105_160",
 #        #"st_top",
 #        #"st_t_antitop",
-#        "st_tw_top",
-#        "st_tw_antitop",
-#        "ttjets_sl", "ttjets_dl",
+        "st_tw_top",
+        "st_tw_antitop",
+        "ttjets_sl", "ttjets_dl",
         "dy_m105_160_amc", "dy_m105_160_vbf_amc",
-        "dy"
     ]
+    mc_samples_combine_Z = [
+        "ggh",
+        "vbf",
+        #"wz_1l1nu2q",
+        "ww_2l2nu", "wz_3lnu", "wz_2l2q", "wz_2l2q", "zz",
+        "ewk_lljj_mll105_160",
+#        #"st_top",
+#        #"st_t_antitop",
+        "st_tw_top",
+        "st_tw_antitop",
+        "ttjets_sl", "ttjets_dl",
+        "dy_0j", "dy_1j", "dy_2j",
+    ]
+    mc_samples_load = list(set(mc_samples_combine_H + mc_samples_combine_Z))
     signal_samples = ["ggh", "vbf"]
     shape_systematics = ["jes", "jer", "puWeight"]
     common_scale_uncertainties = {
@@ -481,28 +497,32 @@ if __name__ == "__main__":
 
 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
-        for mc_samp in mc_samples_combine:
+        for mc_samp in mc_samples_load:
             res[mc_samp] = json.load(open(dd + "/{0}_{1}.json".format(mc_samp, era)))
 
         #in inverse picobarns
         int_lumi = res["data"]["baseline"]["int_lumi"]
 
-        for mc_samp in mc_samples_combine:
-            genweights[mc_samp] = res[mc_samp]["gen_sumweights"]
+        for mc_samp in mc_samples_load:
+            genweights[mc_samp] = res[mc_samp]["genEventSumw"]
             weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
             print(mc_samp, genweights[mc_samp], cross_sections[mc_samp])
         print(era, int_lumi, weight_xs)
 
         for analysis in ["baseline"]:
             #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
-            for var in ["hist__dimuon_invmass_70_110__numjet"]:
+            for var in ["hist__dimuon_invmass_110_150_cat5__leading_jet_pt", "hist__dimuon_invmass_70_110__inv_mass"]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
+                if var == "hist__dimuon_invmass_110_150_cat5__leading_jet_pt":
+                    mc_samples = mc_samples_combine_H
+                elif var == "hist__dimuon_invmass_70_110__inv_mass":
+                    mc_samples = mc_samples_combine_Z
 
                 create_datacard_combine(
                     res,
                     analysis,
-                    ["data"] + mc_samples_combine,
+                    ["data"] + mc_samples,
                     signal_samples,
                     var,
                     "nominal",
@@ -514,13 +534,11 @@ if __name__ == "__main__":
                 )
 
                 weight_scenarios = ["nominal"]
-                if var == "hist__dimuon__npvs":
-                    weight_scenarios += ["puWeight_off"]
                 for weight in weight_scenarios:
                     try:
                         hdata = load_hist(res["data"][analysis][var]["nominal"])
                     except KeyError:
                         print("Histogram {0} not found for data, skipping".format(var))
                         continue
-                    datacard_args += [(res, hdata, mc_samples_combine, analysis, var, weight, weight_xs, int_lumi, outdir)]
+                    datacard_args += [(res, hdata, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir)]
         ret = list(map(make_pdf_plot, datacard_args))

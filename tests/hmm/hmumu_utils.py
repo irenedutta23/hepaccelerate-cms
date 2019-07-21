@@ -174,6 +174,8 @@ def analyze_data(
 
     if is_mc:
         weights["nominal"] = weights["nominal"] * scalars["genWeight"] * genweight_scalefactor
+        print("mean genWeight=", scalars["genWeight"].mean())
+        print("sum genWeight=", scalars["genWeight"].sum())
         pu_weights, pu_weights_up, pu_weights_down = compute_pu_weights(
             pu_corrections[dataset_era],
             weights["nominal"],
@@ -329,17 +331,17 @@ def analyze_data(
         dnn_presel = (ret_mu["selected_events"]) & (ret_jet["num_jets"] >= 2)
 
         #apply VBF filter cut
-        #if is_mc and dataset_name in parameters["vbf_filter"]:
-        #    mask_dijet_genmass = (ret_jet["dijet_inv_mass_gen"] > parameters["vbf_filter_mjj_cut"])
-        #    mask_2gj = ret_jet["num_good_genjets"]>=2
-        #    invert_mask = parameters["vbf_filter"][dataset_name]
-        #    if invert_mask:
-        #        mask_dijet_genmass = NUMPY_LIB.invert(mask_dijet_genmass)
+        if is_mc and dataset_name in parameters["vbf_filter"]:
+            mask_dijet_genmass = (ret_jet["dijet_inv_mass_gen"] > parameters["vbf_filter_mjj_cut"])
+            mask_2gj = ret_jet["num_good_genjets"]>=2
+            invert_mask = parameters["vbf_filter"][dataset_name]
+            if invert_mask:
+                mask_dijet_genmass = NUMPY_LIB.invert(mask_dijet_genmass)
 
-        #    mask_out = NUMPY_LIB.ones_like(mask_dijet_genmass)
-        #    mask_out[mask_2gj & NUMPY_LIB.invert(mask_dijet_genmass)] = False
-        #    print("sample", dataset_name, "numev", len(mask_out), "2gj", mask_2gj.sum(), "2gj&&mjj", (mask_2gj&mask_dijet_genmass).sum(), "out", mask_out.sum()) 
-        #    dnn_presel = dnn_presel & mask_out
+            mask_out = NUMPY_LIB.ones_like(mask_dijet_genmass)
+            mask_out[mask_2gj & NUMPY_LIB.invert(mask_dijet_genmass)] = False
+            print("sample", dataset_name, "numev", len(mask_out), "2gj", mask_2gj.sum(), "2gj&&mjj", (mask_2gj&mask_dijet_genmass).sum(), "out", mask_out.sum()) 
+            dnn_presel = dnn_presel & mask_out
 
         #Compute the DNN inputs, the DNN output, fill the DNN input and output variable histograms
         hists_dnn = {}
@@ -454,86 +456,96 @@ def analyze_data(
             jet_syst_name, ret_jet["num_jets"], weights_selected,
            dnn_presel, NUMPY_LIB.linspace(0, 10, 11))
 
-        ##Save histograms for numerical categories (cat5 only right now) and all mass bins
-        #for massbin_name, massbin_msk in [
-        #        ("all", ret_mu["selected_events"]), 
-        #        ("110_150", masswindow_110_150),
-        #        ("120_130", masswindow_120_130),
-        #        ("70_110", masswindow_70_110)]:
+        #Save histograms for numerical categories (cat5 only right now) and all mass bins
+        for massbin_name, massbin_msk in [
+                #("all", ret_mu["selected_events"]), 
+                ("110_150", masswindow_110_150),
+                ("120_130", masswindow_120_130),
+                ("70_110", masswindow_70_110)]:
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}__inv_mass".format(massbin_name),
+                jet_syst_name, inv_mass, weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(70, 150, 101))
+            update_histograms_systematic(
+                hists,
+                "hist__dimuon_invmass_{0}__leading_muon_pt".format(massbin_name),
+                jet_syst_name, leading_muon["pt"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
 
-        #    if jet_syst_name[0] == "nominal":
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}__numjet".format(massbin_name),
-        #            jet_syst_name, ret_jet["num_jets"], weights_selected,
-        #           massbin_msk, NUMPY_LIB.linspace(0, 10, 11))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}__leading_mu_pt".format(massbin_name),
-        #            jet_syst_name, leading_muon["pt"], weights_selected,
-        #           massbin_msk, NUMPY_LIB.linspace(0, 200, 100))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}__subleading_mu_pt".format(massbin_name),
-        #            jet_syst_name, subleading_muon["pt"], weights_selected,
-        #           massbin_msk, NUMPY_LIB.linspace(0, 200, 100))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}__leading_mu_eta".format(massbin_name),
-        #            jet_syst_name, leading_muon["eta"], weights_selected,
-        #           massbin_msk, NUMPY_LIB.linspace(-3, 3, 100))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}__subleading_mu_eta".format(massbin_name),
-        #            jet_syst_name, subleading_muon["eta"], weights_selected,
-        #           massbin_msk, NUMPY_LIB.linspace(-3, 3, 100))
+            #if jet_syst_name[0] == "nominal":
+            #    update_histograms_systematic(
+            #        hists,
+            #        "hist__dimuon_invmass_{0}__numjet".format(massbin_name),
+            #        jet_syst_name, ret_jet["num_jets"], weights_selected,
+            #       massbin_msk, NUMPY_LIB.linspace(0, 10, 11))
+            #    
+            #    update_histograms_systematic(
+            #        hists,
+            #        "hist__dimuon_invmass_{0}__leading_mu_pt".format(massbin_name),
+            #        jet_syst_name, leading_muon["pt"], weights_selected,
+            #       massbin_msk, NUMPY_LIB.linspace(0, 200, 100))
+            #    
+            #    update_histograms_systematic(
+            #        hists,
+            #        "hist__dimuon_invmass_{0}__subleading_mu_pt".format(massbin_name),
+            #        jet_syst_name, subleading_muon["pt"], weights_selected,
+            #       massbin_msk, NUMPY_LIB.linspace(0, 200, 100))
+            #    
+            #    update_histograms_systematic(
+            #        hists,
+            #        "hist__dimuon_invmass_{0}__leading_mu_eta".format(massbin_name),
+            #        jet_syst_name, leading_muon["eta"], weights_selected,
+            #       massbin_msk, NUMPY_LIB.linspace(-3, 3, 100))
+            #    
+            #    update_histograms_systematic(
+            #        hists,
+            #        "hist__dimuon_invmass_{0}__subleading_mu_eta".format(massbin_name),
+            #        jet_syst_name, subleading_muon["eta"], weights_selected,
+            #       massbin_msk, NUMPY_LIB.linspace(-3, 3, 100))
 
-        #    for icat in [5, ]:
-        #        msk_cat = category == icat
+            for icat in [5, ]:
+                msk_cat = category == icat
 
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}_cat{1}__leading_jet_pt".format(massbin_name, icat),
-        #            jet_syst_name, leading_jet["pt"], weights_selected,
-        #            dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
-        #            jet_syst_name, subleading_jet["pt"], weights_selected,
-        #            dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}_cat{1}__leading_jet_eta".format(massbin_name, icat),
-        #            jet_syst_name, leading_jet["eta"], weights_selected,
-        #            dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
-        #        
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_eta".format(massbin_name, icat),
-        #            jet_syst_name, subleading_jet["eta"], weights_selected,
-        #            dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__leading_jet_pt".format(massbin_name, icat),
+                    jet_syst_name, leading_jet["pt"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                
+                #update_histograms_systematic(
+                #    hists,
+                #    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
+                #    jet_syst_name, subleading_jet["pt"], weights_selected,
+                #    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                #
+                #update_histograms_systematic(
+                #    hists,
+                #    "hist__dimuon_invmass_{0}_cat{1}__leading_jet_eta".format(massbin_name, icat),
+                #    jet_syst_name, leading_jet["eta"], weights_selected,
+                #    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                #
+                #update_histograms_systematic(
+                #    hists,
+                #    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_eta".format(massbin_name, icat),
+                #    jet_syst_name, subleading_jet["eta"], weights_selected,
+                #    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
 
-        #        update_histograms_systematic(
-        #            hists,
-        #            "hist__dimuon_invmass_{0}_cat{1}__final_discriminator".format(massbin_name, icat),
-        #            jet_syst_name, scalars["final_discriminator"], weights_selected,
-        #            dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(0, 1, 101))
+                #update_histograms_systematic(
+                #    hists,
+                #    "hist__dimuon_invmass_{0}_cat{1}__final_discriminator".format(massbin_name, icat),
+                #    jet_syst_name, scalars["final_discriminator"], weights_selected,
+                #    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(0, 1, 101))
 
-        #        #save all DNN input variables
-        #        for varname in dnn_vars.keys():
-        #            if varname in parameters["dnn_input_histogram_bins"].keys():
-        #                hb = parameters["dnn_input_histogram_bins"][varname]
-        #                update_histograms_systematic(
-        #                    hists,
-        #                    "hist__dimuon_invmass_{0}_cat{1}__{2}".format(massbin_name, icat, varname),
-        #                    jet_syst_name, dnn_vars[varname], weights_dnn,
-        #                    (ret_mu["selected_events"] & massbin_msk & msk_cat)[dnn_presel], NUMPY_LIB.linspace(*hb))
+                ##save all DNN input variables
+                #for varname in dnn_vars.keys():
+                #    if varname in parameters["dnn_input_histogram_bins"].keys():
+                #        hb = parameters["dnn_input_histogram_bins"][varname]
+                #        update_histograms_systematic(
+                #            hists,
+                #            "hist__dimuon_invmass_{0}_cat{1}__{2}".format(massbin_name, icat, varname),
+                #            jet_syst_name, dnn_vars[varname], weights_dnn,
+                #            (ret_mu["selected_events"] & massbin_msk & msk_cat)[dnn_presel], NUMPY_LIB.linspace(*hb))
 
     #end of jet systematic loop
 
@@ -687,7 +699,8 @@ def run_analysis(
             #save output
             ret = sum(rets, Results({}))
             if is_mc:
-                ret["gen_sumweights"] = sum([md["precomputed_results"]["genEventSumw"] for md in ret["cache_metadata"]])
+                ret["genEventSumw"] = sum([md["precomputed_results"]["genEventSumw"] for md in ret["cache_metadata"]])
+                ret["genEventSumw2"] = sum([md["precomputed_results"]["genEventSumw2"] for md in ret["cache_metadata"]])
             ret.save_json("{0}/{1}_{2}.json".format(outpath, datasetname, dataset_era))
     
     t1 = time.time()
@@ -1132,13 +1145,16 @@ def get_int_lumi(runs, lumis, mask_events, lumidata):
 
 def get_gen_sumweights(filenames):
     sumw = 0
+    sumw2 = 0
     for fi in filenames:
         ff = uproot.open(fi)
         bl = ff.get("Runs")
         arr = bl.array("genEventSumw")
+        arr2 = bl.array("genEventSumw2")
         arr = arr * genweight_scalefactor
         sumw += arr.sum()
-    return sumw
+        sumw2 += arr2.sum()
+    return sumw, sumw2
 
 """
 Applies Rochester corrections on leading and subleading muons, returns the corrected pt
@@ -1800,7 +1816,8 @@ on the original file. In our case, we need to access the number
 of generated events.
 """
 def func_filename_precompute_mc(filename):
-    ret = {"genEventSumw": get_gen_sumweights([filename])}
+    sumw, sumw2 = get_gen_sumweights([filename])
+    ret = {"genEventSumw": sumw, "genEventSumw2": sumw2}
     return ret
  
 def create_dataset(name, filenames, datastructures, cache_location, datapath, is_mc):
