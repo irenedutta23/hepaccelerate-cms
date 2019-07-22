@@ -473,8 +473,8 @@ if __name__ == "__main__":
         #"wz_3lnu", 
        "ww_2l2nu", "wz_2l2q", "zz",
        "ewk_lljj_mll105_160",
-       #"st_top",
-       #"st_t_antitop",
+        #"st_top",
+        #"st_t_antitop",
        "st_tw_top",
        "st_tw_antitop",
        "ttjets_sl", "ttjets_dl",
@@ -541,16 +541,17 @@ if __name__ == "__main__":
 
             #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
             for var in [
-                "hist__dimuon_invmass_70_110_cat5__leading_jet_pt",
-                "hist__dimuon_invmass_70_110__leading_muon_pt",
-                "hist__dimuon_invmass_70_110_jge1__leading_jet_pt",
+                "hist__dimuon__inv_mass",
                 "hist__dimuon_invmass_70_110__numjet",
+                "hist__dimuon_invmass_70_110__inv_mass",
+                "hist__dimuon_invmass_70_110_cat5__dijet_inv_mass",
+                "hist__dimuon_invmass_70_110_cat5__inv_mass",
                 ]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
                 if "110_150" in var:
                     mc_samples = mc_samples_combine_H
-                elif "70_110" in var:
+                else:
                     mc_samples = mc_samples_combine_Z
                 create_datacard_combine(
                     res,

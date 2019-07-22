@@ -240,7 +240,8 @@ def analyze_data(
         weights["leptonsf_off"] = weights["nominal"]
         weights["nominal"] = weights["nominal"] * sf_tot
 
-    hists["hist__dimuon__npvs"] = fill_with_weights(scalars["PV_npvsGood"], weights, ret_mu["selected_events"], NUMPY_LIB.linspace(0,100,101))
+    hists["hist__dimuon__npvs"] = fill_with_weights(
+        scalars["PV_npvsGood"], weights, ret_mu["selected_events"], NUMPY_LIB.linspace(0,100,101))
     
     #Just a check to verify that there are exactly 2 muons per event
     if doverify:
@@ -248,7 +249,8 @@ def analyze_data(
             muons,
             ret_mu["selected_muons"],
             ret_mu["selected_events"],
-            ret_mu["selected_muons"], dtype=NUMPY_LIB.int8)
+            ret_mu["selected_muons"],
+            dtype=NUMPY_LIB.int8)
         assert(NUMPY_LIB.all(z[z!=0] == 2))
 
     # Get the selected electrons
@@ -270,7 +272,10 @@ def analyze_data(
     n_additional_electrons = ha.sum_in_offsets(electrons, ret_el["additional_electron_sel"], ret_mu["selected_events"], ret_el["additional_electron_sel"], dtype=NUMPY_LIB.int8)
     n_additional_leptons = n_additional_muons + n_additional_electrons
 
-    fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass, leading_muon, subleading_muon, parameters, masswindow_110_150, masswindow_120_130, NUMPY_LIB)
+    fill_muon_hists(
+        hists, scalars, weights, ret_mu, inv_mass,
+        leading_muon, subleading_muon, parameters,
+        masswindow_110_150, masswindow_120_130, NUMPY_LIB)
 
     #Apply JEC, create a dictionary of variated jet momenta
     jet_pt_syst = apply_jec(jets, scalars, parameters, jetmet_corrections[dataset_era][parameters["jec_tag"][dataset_era]], NUMPY_LIB, use_cuda, is_mc)
@@ -462,31 +467,23 @@ def analyze_data(
         
         update_histograms_systematic(
             hists,
-            "hist__dnn_presel__numjet",
-            jet_syst_name, ret_jet["num_jets"], weights_selected,
-           dnn_presel, NUMPY_LIB.linspace(0, 10, 11))
+            "hist__dnn_presel__inv_mass",
+            jet_syst_name, inv_mass, weights_selected,
+           dnn_presel, NUMPY_LIB.linspace(70, 150, 41))
 
         #Save histograms for numerical categories (cat5 only right now) and all mass bins
-        for massbin_name, massbin_msk in [
+        for massbin_name, massbin_msk, mass_edges in [
                 #("all", ret_mu["selected_events"]), 
-                ("110_150", masswindow_110_150),
-                ("120_130", masswindow_120_130),
-                ("70_110", masswindow_70_110)]:
+                #("110_150", masswindow_110_150, (110, 150)),
+                #("120_130", masswindow_120_130, (120, 130)),
+                ("70_110", masswindow_70_110, (70, 110))]:
+
             update_histograms_systematic(
                 hists,
                 "hist__dimuon_invmass_{0}__inv_mass".format(massbin_name),
                 jet_syst_name, inv_mass, weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(70, 150, 101))
-            update_histograms_systematic(
-                hists,
-                "hist__dimuon_invmass_{0}__leading_muon_pt".format(massbin_name),
-                jet_syst_name, leading_muon["pt"], weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
-            update_histograms_systematic(
-                hists,
-                "hist__dimuon_invmass_{0}__subleading_muon_pt".format(massbin_name),
-                jet_syst_name, subleading_muon["pt"], weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(mass_edges[0], mass_edges[1], 41))
+
             update_histograms_systematic(
                 hists,
                 "hist__dimuon_invmass_{0}__numjet".format(massbin_name),
@@ -495,15 +492,10 @@ def analyze_data(
 
             update_histograms_systematic(
                 hists,
-                "hist__dimuon_invmass_{0}_jge1__leading_jet_pt".format(massbin_name),
-                jet_syst_name, leading_jet["pt"], weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
+                "hist__dimuon_invmass_{0}__dijet_inv_mass".format(massbin_name),
+                jet_syst_name, ret_jet["dijet_inv_mass"], weights_selected,
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 10, 11))
 
-            update_histograms_systematic(
-                hists,
-                "hist__dimuon_invmass_{0}_jge1__subleading_jet_pt".format(massbin_name),
-                jet_syst_name, subleading_jet["pt"], weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 200, 41))
 
             #if jet_syst_name[0] == "nominal":
             #    update_histograms_systematic(
@@ -541,16 +533,27 @@ def analyze_data(
 
                 update_histograms_systematic(
                     hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__inv_mass".format(massbin_name, icat),
+                    jet_syst_name, inv_mass, weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(mass_edges[0], mass_edges[1], 41))
+
+                update_histograms_systematic(
+                    hists,
                     "hist__dimuon_invmass_{0}_cat{1}__leading_jet_pt".format(massbin_name, icat),
                     jet_syst_name, leading_jet["pt"], weights_selected,
-                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 41))
                 
                 update_histograms_systematic(
                     hists,
                     "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
                     jet_syst_name, subleading_jet["pt"], weights_selected,
-                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 101))
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 41))
               
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__dijet_inv_mass".format(massbin_name, icat),
+                    jet_syst_name, ret_jet["dijet_inv_mass"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(400, 1000.0, 41))
                 #update_histograms_systematic(
                 #    hists,
                 #    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
@@ -1699,13 +1702,18 @@ def apply_jec(jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, use_cuda
             arr = jet_pt_syst[unc_name]
             diff = arr - jets.pt
             print("wrt NanoAOD", unc_name, diff.mean(), diff.std())
-        import pdb;pdb.set_trace()
         
     #dictionary of variated jet momenta
     return jet_pt_syst
 
-def fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass, leading_muon, subleading_muon, parameters, masswindow_110_150, masswindow_120_130, NUMPY_LIB):
-    hists["hist__dimuon__inv_mass"] = fill_with_weights(inv_mass, weights, ret_mu["selected_events"], NUMPY_LIB.linspace(50,200,101))
+def fill_muon_hists(hists, scalars, weights, ret_mu, inv_mass,
+    leading_muon, subleading_muon, parameters,
+    masswindow_110_150, masswindow_120_130, NUMPY_LIB):
+
+    hists["hist__dimuon__inv_mass"] = fill_with_weights(
+        inv_mass, weights,
+        ret_mu["selected_events"], NUMPY_LIB.linspace(50, 200, 101)
+    )
 
     #get histograms of leading and subleading muon momenta
     hists["hist__dimuon__leading_muon_pt"] = fill_with_weights(leading_muon["pt"], weights, ret_mu["selected_events"], NUMPY_LIB.linspace(0.0, 200.0, 101))
