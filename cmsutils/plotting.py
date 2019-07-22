@@ -546,6 +546,7 @@ if __name__ == "__main__":
                 "hist__dimuon_invmass_70_110__inv_mass",
                 "hist__dimuon_invmass_70_110_cat5__dijet_inv_mass",
                 "hist__dimuon_invmass_70_110_cat5__inv_mass",
+                "hist__dimuon_invmass_70_110_cat5__leading_jet_pt",
                 ]:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue

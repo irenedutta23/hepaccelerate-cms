@@ -102,7 +102,6 @@ def analyze_data(
     dataset_era = "",
     dataset_name = "",
     dataset_num_chunk = "",
-    save_dnn_vars = False 
     ):
 
     muons = data["Muon"]
@@ -323,7 +322,8 @@ def analyze_data(
         category =  assign_category_nan_irene(
             ret_jet["num_jets"], ret_jet["num_jets_btag"],
             n_additional_muons, n_additional_electrons,
-            ret_jet["dijet_inv_mass"], leading_jet, subleading_jet
+            ret_jet["dijet_inv_mass"], leading_jet, subleading_jet,
+            parameters["cat5_dijet_inv_mass"]
         )
         scalars["category"] = category
 
@@ -339,7 +339,7 @@ def analyze_data(
             assert(NUMPY_LIB.all(z[z>0] > parameters["jet_pt"]))
 
         #compute DNN input variables in 2 muon, >=2jet region
-        dnn_presel = (ret_mu["selected_events"]) & (ret_jet["num_jets"] >= 2)
+        dnn_presel = (ret_mu["selected_events"]) & (ret_jet["num_jets"] >= 2) & (ret_jet["dijet_inv_mass"] >= parameters["cat5_dijet_inv_mass"])
 
         #apply VBF filter cut
         if is_mc and dataset_name in parameters["vbf_filter"]:
@@ -358,13 +358,13 @@ def analyze_data(
         #Compute the DNN inputs, the DNN output, fill the DNN input and output variable histograms
         hists_dnn = {}
         dnn_prediction = None
-        #dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
-        #    scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
-        #    weights_selected, hists_dnn)
+        dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
+           scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
+           weights_selected, hists_dnn)
 
         #Assign the final analysis discriminator based on category
         scalars["final_discriminator"] = NUMPY_LIB.zeros_like(inv_mass)
-        if dnn_prediction:
+        if not (dnn_prediction is None):
             inds_nonzero = NUMPY_LIB.nonzero(dnn_presel)[0]
             if len(inds_nonzero) > 0:
                 ha.copyto_dst_indices(scalars["final_discriminator"], dnn_prediction, inds_nonzero)
@@ -376,15 +376,10 @@ def analyze_data(
             dnn_vars["lumi"] = scalars["luminosityBlock"][dnn_presel]
             dnn_vars["event"] = scalars["event"][dnn_presel]
             dnn_vars["Higgs_mass"] = inv_mass[dnn_presel]
-            #if is_mc:
-            #    dnn_vars["dijet_inv_mass_gen"] = ret_jet["dijet_inv_mass_gen"][dnn_presel]
-            #    hists["hist__dijet_inv_mass_gen"] = {"nominal": get_histogram(
-            #        ret_jet["dijet_inv_mass_gen"][ret_mu["selected_events"]],
-            #        weights["nominal"][ret_mu["selected_events"]], NUMPY_LIB.linspace(0,500,101)
-            #    )}
+            dnn_vars["dnn_pred"] = dnn_prediction
 
             #Save the DNN training ntuples as npy files
-            if save_dnn_vars and jet_syst_name[0] == "nominal":
+            if parameters["save_dnn_vars"] and jet_syst_name[0] == "nominal" and parameter_set_name == "baseline":
                 dnn_vars_np = {k: NUMPY_LIB.asnumpy(v) for k, v in dnn_vars.items()}
                 if is_mc:
                     dnn_vars_np["genweight"] = NUMPY_LIB.asnumpy(scalars["genWeight"][dnn_presel])
@@ -548,12 +543,31 @@ def analyze_data(
                     "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
                     jet_syst_name, subleading_jet["pt"], weights_selected,
                     dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(30, 200.0, 41))
-              
+
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__leading_jet_eta".format(massbin_name, icat),
+                    jet_syst_name, leading_jet["eta"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(-4.7, 4.7, 41))
+                
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_eta".format(massbin_name, icat),
+                    jet_syst_name, subleading_jet["eta"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(-4.7, 4.7, 41))
+
                 update_histograms_systematic(
                     hists,
                     "hist__dimuon_invmass_{0}_cat{1}__dijet_inv_mass".format(massbin_name, icat),
                     jet_syst_name, ret_jet["dijet_inv_mass"], weights_selected,
                     dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(400, 1000.0, 41))
+
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__num_soft_jets".format(massbin_name, icat),
+                    jet_syst_name, scalars["SoftActivityJetNjets5"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(0, 10, 11))
+
                 #update_histograms_systematic(
                 #    hists,
                 #    "hist__dimuon_invmass_{0}_cat{1}__subleading_jet_pt".format(massbin_name, icat),
@@ -1828,7 +1842,9 @@ def sync_printout(
                 s += "{0} ".format(scalars["category"][iev])
                 print(s, file=fi)
 
-def assign_category_nan_irene(njet, nbjet, n_additional_muons, n_additional_electrons, dijet_inv_mass, leading_jet, subleading_jet):
+def assign_category_nan_irene(
+    njet, nbjet, n_additional_muons, n_additional_electrons,
+    dijet_inv_mass, leading_jet, subleading_jet, cat5_dijet_inv_mass):
     cats = NUMPY_LIB.zeros_like(njet)
     cats[:] = -9999
 
@@ -1855,7 +1871,7 @@ def assign_category_nan_irene(njet, nbjet, n_additional_muons, n_additional_elec
     msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_4)
 
     #cat 5
-    msk_5 = (dijet_inv_mass > 400)
+    msk_5 = (dijet_inv_mass > cat5_dijet_inv_mass)
     cats[NUMPY_LIB.invert(msk_prev) & msk_5] = 5
     msk_prev = NUMPY_LIB.logical_or(msk_prev, msk_5)
 
