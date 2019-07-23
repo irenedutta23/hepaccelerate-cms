@@ -34,7 +34,7 @@ ha = None
 NUMPY_LIB = None
 
 #Used to scale the genweight to prevent a numerical overflow
-genweight_scalefactor = 1
+genweight_scalefactor = 1e-5
 
 #Use these to turn on debugging
 debug = False
@@ -303,7 +303,7 @@ def analyze_data(
             scalars,
             jets, muons, genJet, genpart,
             ret_mu["selected_muons"], mask_events,
-            parameters["jet_pt"][dataset_era],
+            parameters["jet_pt_subleading"][dataset_era],
             parameters["jet_eta"],
             parameters["jet_mu_dr"],
             parameters["jet_id"],
@@ -333,13 +333,8 @@ def analyze_data(
                 n_additional_muons, n_additional_electrons,
                 ret_jet, leading_jet, subleading_jet)
 
-        #Check that there are no jets with a pt lower than the cut in the selected events
-        if doverify:
-            z = ha.min_in_offsets(jets, jets.pt, ret_mu["selected_events"], ret_jet["selected_jets"])
-            assert(NUMPY_LIB.all(z[z>0] > parameters["jet_pt"]))
-
         #compute DNN input variables in 2 muon, >=2jet region
-        dnn_presel = (ret_mu["selected_events"]) & (ret_jet["num_jets"] >= 2) & (ret_jet["dijet_inv_mass"] >= parameters["cat5_dijet_inv_mass"])
+        dnn_presel = (ret_mu["selected_events"]) & (ret_jet["num_jets"] >= 2) & (leading_jet["pt"] > parameters["jet_pt_leading"][dataset_era])
 
         #apply VBF filter cut
         if is_mc and dataset_name in parameters["vbf_filter"]:
@@ -358,9 +353,9 @@ def analyze_data(
         #Compute the DNN inputs, the DNN output, fill the DNN input and output variable histograms
         hists_dnn = {}
         dnn_prediction = None
-        dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
-           scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
-           weights_selected, hists_dnn)
+        #dnn_vars, dnn_prediction, weights_dnn = compute_fill_dnn(parameters, use_cuda, dnn_presel, dnn_model,
+        #   scalars, leading_muon, subleading_muon, leading_jet, subleading_jet,
+        #   weights_selected, hists_dnn)
 
         #Assign the final analysis discriminator based on category
         scalars["final_discriminator"] = NUMPY_LIB.zeros_like(inv_mass)
@@ -489,8 +484,7 @@ def analyze_data(
                 hists,
                 "hist__dimuon_invmass_{0}__dijet_inv_mass".format(massbin_name),
                 jet_syst_name, ret_jet["dijet_inv_mass"], weights_selected,
-                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 10, 11))
-
+                dnn_presel & massbin_msk, NUMPY_LIB.linspace(0, 1000, 41))
 
             #if jet_syst_name[0] == "nominal":
             #    update_histograms_systematic(
@@ -566,6 +560,12 @@ def analyze_data(
                     hists,
                     "hist__dimuon_invmass_{0}_cat{1}__num_soft_jets".format(massbin_name, icat),
                     jet_syst_name, scalars["SoftActivityJetNjets5"], weights_selected,
+                    dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(0, 10, 11))
+                
+                update_histograms_systematic(
+                    hists,
+                    "hist__dimuon_invmass_{0}_cat{1}__num_jets".format(massbin_name, icat),
+                    jet_syst_name, ret_jet["num_jets"], weights_selected,
                     dnn_presel & massbin_msk & msk_cat, NUMPY_LIB.linspace(0, 10, 11))
 
                 #update_histograms_systematic(
@@ -757,8 +757,8 @@ def run_analysis(
             #save output
             ret = sum(rets, Results({}))
             if is_mc:
-                ret["genEventSumw"] = sum([md["precomputed_results"]["genEventSumw"] for md in ret["cache_metadata"]])
-                ret["genEventSumw2"] = sum([md["precomputed_results"]["genEventSumw2"] for md in ret["cache_metadata"]])
+                ret["genEventSumw"] = genweight_scalefactor * sum([md["precomputed_results"]["genEventSumw"] for md in ret["cache_metadata"]])
+                ret["genEventSumw2"] = genweight_scalefactor * sum([md["precomputed_results"]["genEventSumw2"] for md in ret["cache_metadata"]])
             ret.save_json("{0}/{1}_{2}.json".format(outpath, datasetname, dataset_era))
     
     t1 = time.time()
@@ -935,9 +935,14 @@ def get_selected_jets(
     jets, muons, genJet, genParticle,
     mask_muons,
     mask_events,
-    jet_pt_cut, jet_eta_cut,
-    jet_dr_cut, jet_id, jet_puid, jet_btag,
-    is_mc, use_cuda
+    jet_pt_cut_subleading,
+    jet_eta_cut,
+    jet_dr_cut,
+    jet_id,
+    jet_puid,
+    jet_btag,
+    is_mc,
+    use_cuda
     ):
     """
     Given jets and selected muons in events, choose jets that pass quality
@@ -973,8 +978,11 @@ def get_selected_jets(
         pass_jet_puid = NUMPY_LIB.ones(jets.numobjects(), dtype=NUMPY_LIB.bool)
 
     pass_qgl = jets.qgl > -1 
-    selected_jets = ((jets.pt > jet_pt_cut) &
-        (NUMPY_LIB.abs(jets.eta) < jet_eta_cut) & pass_jetid & pass_jet_puid & pass_qgl)
+    selected_jets = (
+        (jets.pt > jet_pt_cut_subleading) &
+        (NUMPY_LIB.abs(jets.eta) < jet_eta_cut) &
+        pass_jetid & pass_jet_puid & pass_qgl
+    )
     jets_pass_dr = ha.mask_deltar_first(
         jets, selected_jets, muons,
         muons.masks["iso_id_aeta"], jet_dr_cut)
@@ -984,8 +992,10 @@ def get_selected_jets(
    
     #produce a mask that selects the first two selected jets 
     first_two_jets = NUMPY_LIB.zeros_like(selected_jets)
-    targets = NUMPY_LIB.ones_like(mask_events)
-    inds = NUMPY_LIB.zeros_like(mask_events)
+   
+    inds = NUMPY_LIB.zeros_like(mask_events, dtype=NUMPY_LIB.int32) 
+    targets = NUMPY_LIB.ones_like(mask_events, dtype=NUMPY_LIB.int32) 
+    inds[:] = 0
     ha.set_in_offsets(first_two_jets, jets.offsets, inds, targets, mask_events, selected_jets)
     inds[:] = 1
     ha.set_in_offsets(first_two_jets, jets.offsets, inds, targets, mask_events, selected_jets)
@@ -997,7 +1007,6 @@ def get_selected_jets(
 
     #Find the first two genjets in the event that are not matched to gen-leptons
     if is_mc:
-
         #find genleptons
         genpart_pdgid = NUMPY_LIB.abs(genParticle.pdgId)
         genpart_mask = (genpart_pdgid == 11)
@@ -1208,7 +1217,7 @@ def get_gen_sumweights(filenames):
         bl = ff.get("Runs")
         arr = bl.array("genEventSumw")
         arr2 = bl.array("genEventSumw2")
-        arr = arr * genweight_scalefactor
+        arr = arr
         sumw += arr.sum()
         sumw2 += arr2.sum()
     return sumw, sumw2

@@ -112,14 +112,14 @@ def create_variated_histos(
                 hret = hbase
             else:
                 hret = hdict[sname]
-            if np.sum(hret["contents"]) == 0:
-                import pdb;pdb.set_trace() 
             ret[sname2] = Histogram.from_dict(hret)
     return ret
 
 def create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs):
+    
     ret = Results(OrderedDict())
-    event_counts = {} 
+    event_counts = {}
+ 
     for proc in all_processes:
         print("create_datacard", proc)
         rr = dict_procs[proc][parameter_name][histname]
@@ -133,14 +133,10 @@ def create_datacard(dict_procs, parameter_name, all_processes, histname, baselin
 
         for syst_name, histo in variated_histos.items():
             if proc != "data":
-                if weight_xs[proc] == 0:
-                    import pdb;pdb.set_trace() 
                 histo = histo * weight_xs[proc]       
 
             if syst_name == "nominal":
 
-                if (proc in event_counts):
-                    import pdb;pdb.set_trace() 
                 event_counts[proc] = np.sum(histo.contents)
                 print(proc, syst_name, np.sum(histo.contents))
                 if np.sum(histo.contents) < 0.00000001:
@@ -455,7 +451,7 @@ if __name__ == "__main__":
         "ggh",
         "vbf",
         #"wz_1l1nu2q",
-        #"wz_3lnu",
+        "wz_3lnu",
        "ww_2l2nu", "wz_2l2q", "zz",
        "ewk_lljj_mll105_160",
        #"st_top",
@@ -463,14 +459,14 @@ if __name__ == "__main__":
        "st_tw_top",
        "st_tw_antitop",
        "ttjets_sl", "ttjets_dl",
-#       "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+       "dy_m105_160_amc", "dy_m105_160_vbf_amc",
     ]
 
     mc_samples_combine_Z = [
         "ggh",
         "vbf",
         #"wz_1l1nu2q",
-        #"wz_3lnu", 
+        "wz_3lnu", 
        "ww_2l2nu", "wz_2l2q", "zz",
        "ewk_lljj_mll105_160",
         #"st_top",
@@ -512,7 +508,7 @@ if __name__ == "__main__":
         datacard_args = []
         
         analysis = "baseline"
-        input_folder = "out3"
+        input_folder = "out2"
         dd = "{0}/{1}".format(input_folder, analysis) 
         res["data"] = json.load(open(dd + "/data_{0}.json".format(era)))
         for mc_samp in mc_samples_load:
@@ -538,16 +534,10 @@ if __name__ == "__main__":
             for mc_samp in mc_samples_load:
                 genweights[mc_samp] = res[mc_samp]["genEventSumw"]
                 weight_xs[mc_samp] = cross_sections[mc_samp] * int_lumi / genweights[mc_samp]
-
+            
+            histnames = [h for h in res["data"]["baseline"].keys() if h.startswith("hist__")]
             #for var in [k for k in res["vbf"][analysis].keys() if k.startswith("hist_")]:
-            for var in [
-                "hist__dimuon__inv_mass",
-                "hist__dimuon_invmass_70_110__numjet",
-                "hist__dimuon_invmass_70_110__inv_mass",
-                "hist__dimuon_invmass_70_110_cat5__dijet_inv_mass",
-                "hist__dimuon_invmass_70_110_cat5__inv_mass",
-                "hist__dimuon_invmass_70_110_cat5__leading_jet_pt",
-                ]:
+            for var in histnames:
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen"]:
                     continue
                 if "110_150" in var:
