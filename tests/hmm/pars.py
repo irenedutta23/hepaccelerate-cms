@@ -88,6 +88,80 @@ categories = {
         ],
     }
 }
+combined_categories = {
+    "dimuon": {
+        "datacard_processes" : [
+            "ggh_amcPS",
+            "vbf",
+            "vh",
+            "tth",
+            #"wz_1l1nu2q",
+            "vv", 
+            "ewk_lljj_mll50_mjj120",
+            #"ewk_lljj_mll105_160",
+            #"st_top",
+            #"st_t_antitop",
+            "stop",
+            "tt",
+            "dy",
+            "vvv",
+        ],
+    },
+    "z_peak": {
+        "datacard_processes" : [
+            "ggh_amcPS",
+            "vbf",
+            "vh",
+            "tth",
+            #"wz_1l1nu2q",
+            "vv",
+            "ewk_lljj_mll50_mjj120",
+            #"ewk_lljj_mll105_160",
+            #"st_top",
+            #"st_t_antitop",
+            "stop",
+            "tt",
+            "dy_0j", "dy_1j", "dy_2j",
+            "vvv",
+        ],
+    },
+    "h_sideband": {
+        "datacard_processes" : [
+            "ggh_amcPS",
+            "vbf",
+            "vh",
+            "tth",
+            #"wz_1l1nu2q",
+            "vv", 
+            #"ewk_lljj_mll50_mjj120",
+            "ewk_lljj_mll105_160",
+            #"st_top",
+            #"st_t_antitop",
+            "stop",
+            "tt",
+            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "vvv",
+        ],
+    },
+    "h_peak": {
+        "datacard_processes" : [
+            "ggh_amcPS",
+            "vbf",
+            "vh",
+            "tth",
+            #"wz_1l1nu2q",
+            "vv", 
+            #"ewk_lljj_mll50_mjj120",
+            "ewk_lljj_mll105_160",
+            #"st_top",
+            #"st_t_antitop",
+            "stop",
+            "tt",
+            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "vvv",
+        ],
+    }
+}
 
 colors = {
     "dy": (254, 254, 83),
