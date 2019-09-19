@@ -10,7 +10,7 @@ import copy
 import multiprocessing
 
 from pars import catnames, varnames, analysis_names, shape_systematics, controlplots_shape, datasets, genweight_scalefactor
-from pars import process_groups, colors, extra_plot_kwargs
+from pars import process_groups, colors, extra_plot_kwargs,proc_grps,combined_signal_samples
 
 from scipy.stats import wasserstein_distance
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -371,13 +371,6 @@ def create_datacard(dict_procs, parameter_name, all_processes, histname, baselin
     ret = Results(OrderedDict())
     event_counts = {}
     hists_mc = []
-    proc_grps = [
-        ("vh",["wmh", "wph", "zh"]),
-        ("vv", ["wz_3lnu", "ww_2l2nu", "wz_2l2q", "zz"]),
-        ("vvv", ["www","wwz","wzz","zzz"]),
-        ("stop", ["st_tw_top", "st_tw_antitop"]),
-        ("tt", ["ttjets_sl", "ttjets_dl",]),
-    ]
     for pid,pid_procs in proc_grps:
         event_counts[pid]=0
     for proc in all_processes:
@@ -827,7 +820,6 @@ if __name__ == "__main__":
 
                 histos = {s: res[s][analysis][var] for s in mc_samples + ["data"]}
                 print(era, analysis, var)
-                combined_signal_samples= ["ggh_amcPS", "vbf", "vh", "tth"]
                 datacard_args += [
                     (histos,
                     analysis,
