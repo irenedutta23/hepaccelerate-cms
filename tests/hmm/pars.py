@@ -88,6 +88,14 @@ categories = {
         ],
     }
 }
+proc_grps = [
+        ("vh",["wmh", "wph", "zh"]),
+        ("vv", ["wz_3lnu", "ww_2l2nu", "wz_2l2q", "zz"]),
+        ("vvv", ["www","wwz","wzz","zzz"]),
+        ("stop", ["st_tw_top", "st_tw_antitop"]),
+        ("tt", ["ttjets_sl", "ttjets_dl",]),
+    ]
+combined_signal_samples= ["ggh_amcPS", "vbf", "vh", "tth"]
 combined_categories = {
     "dimuon": {
         "datacard_processes" : [
