@@ -2942,12 +2942,6 @@ def create_datastructure(dataset_name, is_mc, dataset_era, do_fsr=False):
             ("Jet_area", "float32"),
             ("Jet_rawFactor", "float32")
         ],
-        #"FSRPhoton":[
-         #   ("FSRPhoton_pt", "float32"),
-         #   ("FSRPhoton_eta", "float32"),
-         #   ("FSRPhoton_phi", "float32"),
-         #   ("FSRPhoton_mass", "float32"),
-       # ],
      "SoftActivityJet": [
             ("SoftActivityJet_pt", "float32"),
             ("SoftActivityJet_eta", "float32"),
