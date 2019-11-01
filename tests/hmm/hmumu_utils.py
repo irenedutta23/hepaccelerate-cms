@@ -392,7 +392,6 @@ def analyze_data(
     for uncertainty_name in syst_to_consider:
         #This will be the variated pt vector
         #print("computing variated pt for", uncertainty_name)
-        if(uncertainty_name=='jer'):continue
         var_up_down = jet_systematics.get_variated_pts(uncertainty_name, startfrom=jet_pt_startfrom)
         for jet_syst_name, jet_pt_vec in var_up_down.items():
             # For events where the JEC/JER was variated, fill only the nominal weight
@@ -1216,7 +1215,7 @@ def get_selected_muons(
 
     if fsrphotons:
 
-        out_muons_fsrPhotonIdx = muons.fsrPhotonIdx
+        out_muons_fsrPhotonIdx = NUMPY_LIB.array(muons.fsrPhotonIdx)
         fix_muon_fsrphoton_index(fsrphotons.offsets, muons.offsets, fsrphotons.dROverEt2, fsrphotons.muonIdx, muons.fsrPhotonIdx, out_muons_fsrPhotonIdx)
         mu_attrs = ["pt", "eta", "phi", "mass", "fsrPhotonIdx"]
         size = muons.numevents()
