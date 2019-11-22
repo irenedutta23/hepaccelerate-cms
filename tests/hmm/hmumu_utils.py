@@ -39,8 +39,8 @@ ha = None
 NUMPY_LIB = None
 
 #Use these to turn on debugging
-debug = True
-#debug = False
+#debug = True
+debug = False
 #event IDs for which to print out detailed information
 debug_event_ids = [37410,37416,37463,37464]
 
@@ -338,8 +338,6 @@ def analyze_data(
     #    puid_weights = get_puid_weights(jets_passing_id, passed_puid, puidreweighting, dataset_era, parameters["jet_puid"], use_cuda)
     #    weights_individual["jet_puid"] = {"nominal": puid_weights, "up": puid_weights, "down": puid_weights}
 
-    #selected_jets_pt_id = ( jets.pt > parameters["jet_pt_subleading"][dataset_era]) & (selected_jets_id)
-    #jets_passing_pt_id = jets.select_objects(selected_jets_pt_id)
     if is_mc:
         btagWeights, btagWeights_up, btagWeights_down = get_btag_weights_shape(jets_passing_id, btag_weights, dataset_era, scalars, parameters["jet_pt_subleading"][dataset_era])
         weights_individual["btag_weight"] = {"nominal": btagWeights, "up": btagWeights, "down": btagWeights}
@@ -1684,21 +1682,19 @@ def compute_eff_product(offsets, jets_mask_passes_id, jets_eff, use_cuda):
 
 
 @numba.njit(parallel=True)
-def compute_event_btag_weight_shape(offsets, pt_eta_mask, jets_sf, out_weight):
-    #import pdb;pdb.set_trace();
+def compute_event_btag_weight_shape(offsets, jets_sf, out_weight):
     for iev in numba.prange(len(offsets)-1):
         p_tot = 1.0
         #loop over jets in event
         for ij in range(offsets[iev], offsets[iev+1]):
-            if pt_eta_mask[ij]:
-                p_tot *= jets_sf[ij]
+            p_tot *= jets_sf[ij]
         out_weight[iev] = p_tot
 
 def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     tag_name = 'DeepCSV_'+era
     nev = jets.numevents()
-    pt_eta_mask = (NUMPY_LIB.abs(jets.eta<2.4)) & (jets.pt > pt_cut)
-    p_jetWt = NUMPY_LIB.ones(len(jets.pt))
+    pt_eta_mask = NUMPY_LIB.logical_or((NUMPY_LIB.abs(jets.eta)>2.4), (jets.pt < pt_cut))
+    p_jetWt = NUMPY_LIB.ones(len(jets.pt), dtype=NUMPY_LIB.float32)
     eventweight_btag = NUMPY_LIB.ones(nev)
     
     # Code help from https://github.com/chreissel/hepaccelerate/blob/mass_fit/lib_analysis.py#L118
@@ -1713,11 +1709,12 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
             SF_btag[jets.hadronFlavour != 0] = 1.
         
         p_jetWt*=SF_btag
-        #p_jetWt[NUMPY_LIB.invert(pt_eta_mask)] = 1.
-    #import pdb;pdb.set_trace();
-    p_jetWt[np.abs(jets.eta>2.4)] = 1.
-    p_jetWt[(jets.pt < pt_cut)] = 1.
-    compute_event_btag_weight_shape(jets.offsets, pt_eta_mask, p_jetWt, eventweight_btag)
+    #print("p_JetWt before", p_jetWt, p_jetWt.mean(), p_jetWt.std())
+    p_jetWt[pt_eta_mask] = 1.
+    #print("p_JetWt after", p_jetWt, p_jetWt.mean(), p_jetWt.std())
+    compute_event_btag_weight_shape(jets.offsets, p_jetWt, eventweight_btag)
+    #print("eventweight_btag", eventweight_btag, eventweight_btag.mean(), eventweight_btag.std())
+    
     if debug:
         for evtid in debug_event_ids:
             idx = np.where(scalars["event"] == evtid)[0][0]
@@ -1762,9 +1759,11 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
                 else:
                     p_jetWt_down[i]*=SF_btag
             if sdir == 'up':
-                compute_event_btag_weight_shape(jets.offsets, pt_eta_mask, p_jetWt_up[i], eventweight_btag_up[i])
+                p_jetWt_up[i][pt_eta_mask] = 1.
+                compute_event_btag_weight_shape(jets.offsets, p_jetWt_up[i], eventweight_btag_up[i])
             else:
-                compute_event_btag_weight_shape(jets.offsets, pt_eta_mask, p_jetWt_down[i], eventweight_btag_down[i])
+                p_jetWt_down[i][pt_eta_mask] = 1.
+                compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
     return eventweight_btag , eventweight_btag_up, eventweight_btag_down
 
 @numba.njit(parallel=True)
