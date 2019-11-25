@@ -378,7 +378,7 @@ def analyze_data(
             (leading_muon["pt"], "leading_muon_eta", histo_bins["muon_eta"]),
             (subleading_muon["pt"], "subleading_muon_eta", histo_bins["muon_eta"]),
             (higgs_inv_mass, "inv_mass", histo_bins["inv_mass"]),
-            (scalars["PV_npvsGood"], "npvs", histo_bins["npvs"]),
+            (scalars["PV_npvsGood"], "npvs", histo_bins["npvs"])
         ],
         ret_mu["selected_events"],
         weights_final,
@@ -464,7 +464,7 @@ def analyze_data(
             # Set this default value as in Nan and Irene's code
             ret_jet["dijet_inv_mass"][ret_jet["num_jets"] < 2] = -1000.0
             # Get the data for the leading and subleading jets as contiguous vectors
-            jet_attrs = ["pt", "eta", "phi", "mass", "qgl","jetId","puId"]
+            jet_attrs = ["pt", "eta", "phi", "mass", "qgl","jetId","puId","btagDeepB"]
             if is_mc:
                 jet_attrs += ["hadronFlavour"]
 
@@ -507,6 +507,8 @@ def analyze_data(
                     (scalars["SoftActivityJetNjets5"], "num_soft_jets", histo_bins["numjets"]),
                     (ret_jet["num_jets"], "num_jets" , histo_bins["numjets"]),
                     (pt_balance, "pt_balance", histo_bins["pt_balance"]),
+                    (leading_jet["btagDeepB"], "leading_jet_DeepCSV", histo_bins["DeepCSV"]),
+                    (subleading_jet["btagDeepB"], "subleading_jet_DeepCSV", histo_bins["DeepCSV"]),
                 ],
                 dnn_presel, 
                 weights_selected,
@@ -625,7 +627,9 @@ def analyze_data(
                             (ret_jet["dijet_inv_mass"], "dijet_inv_mass", histo_bins["dijet_inv_mass"]),
                             (scalars["SoftActivityJetNjets5"], "num_soft_jets", histo_bins["numjets"]),
                             (ret_jet["num_jets"], "num_jets" , histo_bins["numjets"]),
-                            (pt_balance, "pt_balance", histo_bins["pt_balance"])
+                            (pt_balance, "pt_balance", histo_bins["pt_balance"]),
+                            (leading_jet["btagDeepB"], "leading_jet_DeepCSV", histo_bins["DeepCSV"]),
+                            (subleading_jet["btagDeepB"], "subleading_jet_DeepCSV", histo_bins["DeepCSV"]),
                         ],
                         (dnn_presel & massbin_msk & msk_cat),
                         weights_selected,
