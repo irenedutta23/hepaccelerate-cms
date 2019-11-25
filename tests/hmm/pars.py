@@ -371,7 +371,7 @@ jec_unc = [
 
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "puWeight", "L1PreFiringWeight","DYLHEScaleWeight","EWZLHEScaleWeight"]
+shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "puWeight", "L1PreFiringWeight","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bFl","btag_weight_cFl","btag_weight_lFl"]
 common_scale_uncertainties = {
     "lumi": 1.025,
 }
@@ -658,7 +658,8 @@ histo_bins = {
     "numjets": np.linspace(0, 10, 11, dtype=np.float32),
     "jet_qgl": np.linspace(0, 1, 11, dtype=np.float32),
     "massErr": np.linspace(0, 10, 101, dtype=np.float32),
-    "massErr_rel": np.linspace(0, 0.05, 101, dtype=np.float32)
+    "massErr_rel": np.linspace(0, 0.05, 101, dtype=np.float32),
+    "DeepCSV": np.linspace(0, 1, 11, dtype=np.float32)
 }
 for hname, bins in analysis_parameters["baseline"]["dnn_input_histogram_bins"].items():
     histo_bins[hname] = np.linspace(bins[0], bins[1], bins[2], dtype=np.float32)
