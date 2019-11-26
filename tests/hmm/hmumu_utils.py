@@ -339,9 +339,10 @@ def analyze_data(
 
     if is_mc and parameters["apply_btag"]:
         btagWeights, btagWeights_up, btagWeights_down = get_btag_weights_shape(jets_passing_id, btag_weights, dataset_era, scalars, parameters["jet_pt_subleading"][dataset_era])
-        weights_individual["btag_weight"] = {"nominal": btagWeights, "up": btagWeights, "down": btagWeights}
-        weights_individual["btag_weight_bcFl"] = {"nominal": btagWeights, "up": btagWeights_up[0]*btagWeights_up[1], "down": btagWeights_down[0]*btagWeights_down[1]}
-        weights_individual["btag_weight_lFl"] = {"nominal": btagWeights, "up": btagWeights_up[2], "down": btagWeights_down[2]}
+        
+        weights_individual["btag_weight"] = {"nominal": btagWeights, "up": NUMPY_LIB.ones_like(btagWeights), "down": NUMPY_LIB.ones_like(btagWeights)}
+        weights_individual["btag_weight_bcFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[0]*btagWeights_up[1], "down": btagWeights_down[0]*btagWeights_down[1]}
+        weights_individual["btag_weight_lFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[2], "down": btagWeights_down[2]}
     #compute variated weights here to ensure the nominal weight contains all possible other weights  
     compute_event_weights(parameters, weights_individual, scalars,
         genweight_scalefactor, gghnnlopsw, ZpTw,
@@ -803,9 +804,15 @@ def finalize_weights(weights, all_weight_names=None):
                 wtot *= wval_this_systematic
 
                 for other_syst in all_weight_names:
-                    if (other_syst == this_syst or other_syst == "nominal") or other_syst == "LHEScaleWeight":
+                    if (other_syst == this_syst or other_syst == "nominal") or other_syst == "LHEScaleWeight" or other_syst == "mu1_id" or other_syst == "mu1_iso" or other_syst == "mu2_id"or other_syst == "mu2_iso":
                         continue
+                    #Don't apply the nominal btag weight while considering btag systematics. 
+                    #Fine to apply btag_lFl nominal (array of ones) while considering shape variation from btag_bcFl (or vice-versa)
+                    if((this_syst == "btag_weight_bcFl" or this_syst == "btag_weight_lFl") and (other_syst == "btag_weight")):
+                        continue
+                    #print("Applying ",other_syst, " to variation of ",this_syst) 
                     wtot *= weights[other_syst]["nominal"] 
+                    #print(wtot)
                 ret["{0}__{1}".format(this_syst, sdir)] = wtot
     
     for k in ret.keys():
