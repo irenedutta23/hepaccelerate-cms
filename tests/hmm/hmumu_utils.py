@@ -338,11 +338,10 @@ def analyze_data(
     #    puid_weights = get_puid_weights(jets_passing_id, passed_puid, puidreweighting, dataset_era, parameters["jet_puid"], use_cuda)
     #    weights_individual["jet_puid"] = {"nominal": puid_weights, "up": puid_weights, "down": puid_weights}
 
-    if is_mc:
+    if is_mc and parameters["apply_btag"]:
         btagWeights, btagWeights_up, btagWeights_down = get_btag_weights_shape(jets_passing_id, btag_weights, dataset_era, scalars, parameters["jet_pt_subleading"][dataset_era])
         weights_individual["btag_weight"] = {"nominal": btagWeights, "up": btagWeights, "down": btagWeights}
-        weights_individual["btag_weight_bFl"] = {"nominal": btagWeights, "up": btagWeights_up[0], "down": btagWeights_down[0]}
-        weights_individual["btag_weight_cFl"] = {"nominal": btagWeights, "up": btagWeights_up[1], "down": btagWeights_down[1]}
+        weights_individual["btag_weight_bcFl"] = {"nominal": btagWeights, "up": btagWeights_up[0]*btagWeights_up[1], "down": btagWeights_down[0]*btagWeights_down[1]}
         weights_individual["btag_weight_lFl"] = {"nominal": btagWeights, "up": btagWeights_up[2], "down": btagWeights_down[2]}
     #compute variated weights here to ensure the nominal weight contains all possible other weights  
     compute_event_weights(parameters, weights_individual, scalars,
@@ -568,7 +567,8 @@ def analyze_data(
                     dnn_vars["m1_iso"] = weights_individual['mu1_iso']['nominal'][dnn_presel]
                     dnn_vars["m2_id"] = weights_individual['mu2_id']['nominal'][dnn_presel]
                     dnn_vars["m2_iso"] = weights_individual['mu2_iso']['nominal'][dnn_presel]
-                    dnn_vars["btag_weight"] = weights_individual['btag_weight']['nominal'][dnn_presel]
+                    if parameters["apply_btag"]:
+                        dnn_vars["btag_weight"] = weights_individual['btag_weight']['nominal'][dnn_presel]
 
                 dnn_vars["j1_jetId"] = leading_jet["jetId"][dnn_presel]
                 dnn_vars["j1_puId"] = leading_jet["puId"][dnn_presel]
@@ -774,10 +774,11 @@ def finalize_weights(weights, all_weight_names=None):
 
     #multitply up all the nominal weights
     for this_syst in all_weight_names:
-        if this_syst == "nominal" or this_syst == "LHEScaleWeight" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight_bFl" or this_syst == "btag_weight_cFl" or this_syst == "btag_weight_lFl":
+        #print(this_syst)
+        if this_syst == "nominal" or this_syst == "LHEScaleWeight" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight_bcFl" or this_syst == "btag_weight_lFl":
             continue
         ret["nominal"] *= weights[this_syst]["nominal"]
-
+        #print(ret["nominal"])
     #create the variated weights, where just one weight is variated up or down
     for this_syst in all_weight_names:
         if this_syst == "nominal" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight":

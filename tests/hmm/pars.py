@@ -371,7 +371,7 @@ jec_unc = [
 
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "puWeight", "L1PreFiringWeight","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bFl","btag_weight_cFl","btag_weight_lFl"]
+shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "puWeight", "L1PreFiringWeight","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl"]
 common_scale_uncertainties = {
     "lumi": 1.025,
 }
@@ -536,7 +536,7 @@ analysis_parameters = {
         "jet_btag_medium": {"2016": 0.6321, "2017": 0.4941, "2018": 0.4184},
         "jet_btag_loose": {"2016": 0.2217, "2017": 0.1522, "2018": 0.1241},
         "do_factorized_jec": True,
-
+        "apply_btag": False,
         "softjet_pt": 5.0,
         "softjet_evt_dr2": 0.16, 
 
