@@ -39,8 +39,8 @@ ha = None
 NUMPY_LIB = None
 
 #Use these to turn on debugging
-#debug = True
-debug = False
+debug = True
+#debug = False
 #event IDs for which to print out detailed information
 debug_event_ids = [37410,37416,37463,37464]
 
@@ -1732,7 +1732,7 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     #print("p_JetWt after", p_jetWt, p_jetWt.mean(), p_jetWt.std())
     compute_event_btag_weight_shape(jets.offsets, p_jetWt, eventweight_btag)
     #print("eventweight_btag", eventweight_btag, eventweight_btag.mean(), eventweight_btag.std())
-    
+    '''
     if debug:
         for evtid in debug_event_ids:
             idx = np.where(scalars["event"] == evtid)[0][0]
@@ -1740,11 +1740,11 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
             jaggedstruct_print(jets, idx,
                                ["pt", "eta", "phi","hadronFlavour", "btagDeepB"])
             print(eventweight_btag[idx])
-            
+    '''     
     #not all syst are for all flavours
     # bFlav - jes, lf, hfstats1, hfstats2
     # cFlav - cferr1, cferr2
-    # lFlav - jes, hf, hfstats1, lfstats2
+    # lFlav - jes, hf, lfstats1, lfstats2
     tag_sys=['jes', 'hf', 'hfstats1', 'hfstats2', 'lf', 'lfstats1', 'lfstats2', 'cferr1', 'cferr2']
     
     p_jetWt_up= []
@@ -1763,7 +1763,7 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
                 tsys_name = "DeepCSV_3_iterativefit_" + sdir + '_' + tsys + '_' + str(i)
                 #automatically skip syst which aren't for a particular flavour
                 if tsys_name not in evaluator[tag_name].evaluator.keys():
-                    print(tsys_name, " not found in ",era)
+                    print(tsys_name, " not found for flavour ",i)
                     continue
                 SF_btag = evaluator[tag_name].evaluator[tsys_name](jets.eta, jets.pt, jets.btagDeepB)
                 if tsys_name.endswith("0"):
@@ -1782,6 +1782,14 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
             else:
                 p_jetWt_down[i][pt_eta_mask] = 1.
                 compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
+
+            if debug:
+                for evtid in debug_event_ids:
+                    idx = np.where(scalars["event"] == evtid)[0][0]
+                    print("jets for b tag")
+                    jaggedstruct_print(jets, idx,
+                                       ["pt", "eta", "phi","hadronFlavour", "btagDeepB"])
+                    print(i,eventweight_btag_up[i][idx],eventweight_btag_down[i][idx])
     return eventweight_btag , eventweight_btag_up, eventweight_btag_down
 
 @numba.njit(parallel=True)
