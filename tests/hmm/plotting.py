@@ -353,7 +353,7 @@ def create_variated_histos(proc,
     ret["nominal"] = hbase
     for variation in variations:
         for vdir in ["up", "down"]:
-            #print("create_variated_histos", variation, vdir)
+            print("create_variated_histos", variation, vdir)
             sname = "{0}__{1}".format(variation, vdir)
             if sname.endswith("__up"):
                 sname2 = sname.replace("__up", "Up")
@@ -739,7 +739,7 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
     elif ("h_peak" in cat.full_name) or ("h_sideband" in cat.full_name):
         dcof.write("R rateParam {0} dy_m105_160_amc 1 \n".format(cat.full_name))           
         dcof.write("R rateParam {0} dy_m105_160_vbf_amc 1 \n".format(cat.full_name))
-        dcof.write("REWZ rateParam {0} ewk_lljj_mll105_mjj160 1 \n".format(cat.full_name))
+        dcof.write("REWZ rateParam {0} ewk_lljj_mll105_160 1 \n".format(cat.full_name))
     dcof.write("{0} autoMCStats 0 0 1 \n".format(cat.full_name))
     dcof.write("\n")
     dcof.write("# Execute with:\n")
@@ -911,7 +911,7 @@ if __name__ == "__main__":
         rets = list(pool.map(make_pdf_plot, plot_args))
         #rets = list(pool.map(make_pdf_plot, plot_args_weights_off))
         rets = list(pool.map(create_datacard_combine_wrap, datacard_args))
-        #rets = list(pool.map(plot_variations, plot_args_shape_syst))
+        rets = list(pool.map(plot_variations, plot_args_shape_syst))
 
         #for args, retval in zip(datacard_args, rets):
         #    res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir, datataking_year = args
