@@ -40,8 +40,8 @@ ha = None
 NUMPY_LIB = None
 
 #Use these to turn on debugging
-debug = True
-#debug = False
+#debug = True
+debug = False
 #event IDs for which to print out detailed information
 debug_event_ids = [37410,37416,37463,37464]
 
@@ -1746,8 +1746,10 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     # bFlav - jes, lf, hfstats1, hfstats2
     # cFlav - cferr1, cferr2
     # lFlav - jes, hf, lfstats1, lfstats2
-    tag_sys=['jes', 'hf', 'hfstats1', 'hfstats2', 'lf', 'lfstats1', 'lfstats2', 'cferr1', 'cferr2']
-    
+    tag_sys = []
+    tag_sys.append(['jes', 'lf', 'hfstats1', 'hfstats2'])
+    tag_sys.append([ 'cferr1', 'cferr2'])
+    tag_sys.append(['jes', 'hf',  'lfstats1', 'lfstats2'])
     p_jetWt_up= []
     p_jetWt_down=[]
     eventweight_btag_up = []
@@ -1760,7 +1762,7 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     #print(evaluator[tag_name].evaluator.keys())
     for i in range(0,3):
         for sdir in ['up','down']:
-            for tsys in tag_sys:
+            for tsys in tag_sys[i]:
                 tsys_name = "DeepCSV_3_iterativefit_" + sdir + '_' + tsys + '_' + str(i)
                 #automatically skip syst which aren't for a particular flavour
                 if tsys_name not in evaluator[tag_name].evaluator.keys():
