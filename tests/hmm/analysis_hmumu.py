@@ -362,7 +362,7 @@ class AnalysisCorrections:
         self.btag_weights = {
             
             "DeepCSV_2016": BTagWeights( tag_name = "DeepCSV_2016LegacySF_V1"),
-            "DeepCSV_2017": BTagWeights( tag_name = "DeepCSV_94XSF_V4_B_F"),
+            "DeepCSV_2017": BTagWeights( tag_name = "DeepCSV_94XSF_V5_B_F"),
             "DeepCSV_2018": BTagWeights( tag_name = "DeepCSV_102XSF_V1")
         }
         
