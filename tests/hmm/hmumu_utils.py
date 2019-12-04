@@ -645,7 +645,11 @@ def analyze_data(
                             for varname in dnn_vars.keys() if varname in histo_bins.keys()
                         ] + [
                             (dnn_vars["dnn_pred"], "dnn_pred2", histo_bins["dnn_pred2"][massbin_name])
-                        ],
+                        ] + [
+                            (dnn_vars["dnnPisa_pred"+str(imodel)], "dnnPisa_pred"+str(imodel), histo_bins["dnnPisa_pred"])
+                            for imodel in range(len(dnnPisa_predictions)) if (len(dnnPisa_predictions)!=0)
+                        ]
+                        ,
                         (dnn_presel & massbin_msk & msk_cat)[dnn_presel],
                         weights_in_dnn_presel,
                         use_cuda
@@ -2457,7 +2461,7 @@ def dnn_variables(hrelresolution, leading_muon, subleading_muon, leading_jet, su
         "Higgs_pt": mm_sph["pt"],
         "Higgs_eta": mm_sph["eta"],
         "Higgs_rapidity": mm_sph["rapidity"],
-        "Higgs_mass": mm_sph["mass"], #fixm
+        "Higgs_mass": fixm, #mm_sph["mass"], #fixm
         #DNN pisa variable
         "Mqq_log": NUMPY_LIB.log(jj_sph["mass"] ),
         "Rpt": mmjj_sph["pt"]/(mm_sph["pt"]+leading_jet["pt"]+subleading_jet["pt"]),

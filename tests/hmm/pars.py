@@ -660,7 +660,9 @@ histo_bins = {
     "jet_qgl": np.linspace(0, 1, 11, dtype=np.float32),
     "massErr": np.linspace(0, 10, 101, dtype=np.float32),
     "massErr_rel": np.linspace(0, 0.05, 101, dtype=np.float32),
-    "DeepCSV": np.linspace(0, 1, 11, dtype=np.float32)
+    "DeepCSV": np.linspace(0, 1, 11, dtype=np.float32),
+    "dnnPisa_pred" : np.linspace(0,1,1001, dtype=np.float32),
+
 }
 for hname, bins in analysis_parameters["baseline"]["dnn_input_histogram_bins"].items():
     histo_bins[hname] = np.linspace(bins[0], bins[1], bins[2], dtype=np.float32)
