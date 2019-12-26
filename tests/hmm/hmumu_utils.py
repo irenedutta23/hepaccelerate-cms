@@ -27,7 +27,6 @@ from hepaccelerate.utils import Results
 from hepaccelerate.utils import Dataset
 from hepaccelerate.utils import Histogram
 import hepaccelerate.backend_cpu as backend_cpu
-import hepaccelerate.backend_cpu as backend_cuda
 
 from coffea.lookup_tools import extractor
 from coffea.util import awkward
@@ -97,6 +96,9 @@ def analyze_data(
     random_seed = 0, 
     lumimask = None 
     ):
+
+    if use_cuda:
+        import hepaccelerate.backend_cuda as backend_cuda
 
     # Collect results into this dictionary
     ret = Results({})
@@ -781,7 +783,6 @@ def finalize_weights(weights, all_weight_names=None):
 
     #multitply up all the nominal weights
     for this_syst in all_weight_names:
-        #print(this_syst)
         if this_syst == "nominal" or this_syst == "LHEScaleWeight" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight_bcFl" or this_syst == "btag_weight_lFl":
             continue
         ret["nominal"] *= weights[this_syst]["nominal"]
@@ -818,7 +819,6 @@ def finalize_weights(weights, all_weight_names=None):
                         continue
                     #print("Applying ",other_syst, " to variation of ",this_syst) 
                     wtot *= weights[other_syst]["nominal"] 
-                    #print(wtot)
                 ret["{0}__{1}".format(this_syst, sdir)] = wtot
     
     for k in ret.keys():
@@ -1516,7 +1516,7 @@ def nsoftjets_cudakernel(nsoft, softht, nevt, softjets_offsets, pt, eta, phi, et
                 if ((eta[isoftjets]<etaj1[iev] and eta[isoftjets]>etaj2[iev]) or (eta[isoftjets]<etaj2[iev] and eta[isoftjets]>etaj1[iev])):
                     nobj = len(phis)
                     for index in range(nobj):
-                        dphi = deltaphi_cuda_devfunc(phi[isoftjets], phis[index])
+                        dphi = backend_cuda.deltaphi_devfunc(phi[isoftjets], phis[index])
                         deta = eta[isoftjets] - etas[index]
                         dr = dphi**2 + deta**2
                         if dr < dr2cut:
@@ -1674,10 +1674,6 @@ def get_selected_jets(
 def get_puid_weights(jets, passed_puid, evaluator, era, wp, jet_pt_min, jet_pt_max, use_cuda):
     nev = jets.numevents()
 
-    # PU ID weights haven't been validated for 2017 yet
-    if era=="2017":
-        return NUMPY_LIB.ones(nev, dtype=NUMPY_LIB.float32)
-
     wp_dict = {"loose": "L", "medium": "M", "tight": "T"}
     jets_pu_eff, jets_pu_sf = jet_puid_evaluate(evaluator, era, wp_dict[wp], NUMPY_LIB.asnumpy(jets.pt), NUMPY_LIB.asnumpy(jets.eta))
     jet_pt_mask = ((NUMPY_LIB.asnumpy(jets.pt)>jet_pt_min) & (NUMPY_LIB.asnumpy(jets.pt)<jet_pt_max))
@@ -1694,8 +1690,15 @@ def jet_puid_evaluate(evaluator, era, wp, jet_pt, jet_eta):
     puid_sf = evaluator[h_sf_name](jet_pt, jet_eta)
     return NUMPY_LIB.array(puid_eff), NUMPY_LIB.array(puid_sf)
 
+def compute_dnnPisaComb(dnnPisaComb_pred, dnnPisa_preds, event_array, use_cuda):
+    if use_cuda:
+        compute_dnnPisaComb_cuda[32,1024](dnnPisaComb_pred, dnnPisa_preds, event_array)
+        cuda.synchronize()
+    else:
+        compute_dnnPisaComb_cpu(dnnPisaComb_pred, dnnPisa_preds, event_array)
+
 @numba.njit(parallel=True)
-def compute_dnnPisaComb(dnnPisaComb_pred, dnnPisa_preds, event_array):
+def compute_dnnPisaComb_cpu(dnnPisaComb_pred, dnnPisa_preds, event_array):
     for i in numba.prange(len(dnnPisaComb_pred)):
             if event_array[i]%4 == 0:
                 dnnPisaComb_pred[i] = dnnPisa_preds[0][i]
@@ -1705,6 +1708,20 @@ def compute_dnnPisaComb(dnnPisaComb_pred, dnnPisa_preds, event_array):
                 dnnPisaComb_pred[i] = dnnPisa_preds[2][i]
             else:
                 dnnPisaComb_pred[i] = dnnPisa_preds[3][i]
+
+@cuda.jit
+def compute_dnnPisaComb_cuda(dnnPisaComb_pred, dnnPisa_preds, event_array):
+    xi = cuda.grid(1)
+    xstride = cuda.gridsize(1)
+    for i in range(xi, dnnPisaComb_pred.shape[0], xstride):
+        if event_array[i]%4 == 0:
+            dnnPisaComb_pred[i] = dnnPisa_preds[0][i]
+        elif event_array[i]%4 == 1:
+            dnnPisaComb_pred[i] = dnnPisa_preds[1][i]
+        elif event_array[i]%4 == 2:
+            dnnPisaComb_pred[i] = dnnPisa_preds[2][i]
+        else:
+            dnnPisaComb_pred[i] = dnnPisa_preds[3][i]
 
 def compute_eff_product(offsets, jet_pt_mask, jets_mask_passes_id, jets_eff, use_cuda):
     nev = len(offsets) - 1
@@ -2313,7 +2330,7 @@ def deltar(obj1, obj2, use_cuda):
     deta = obj1["eta"] - obj2["eta"]
     dphi = NUMPY_LIB.zeros(len(deta), dtype=NUMPY_LIB.float32)
     if use_cuda:
-        deltaphi_cudakernel[21,1024](obj1["phi"],obj2["phi"],dphi)
+        deltaphi_cudakernel[32,1024](obj1["phi"],obj2["phi"],dphi)
         cuda.synchronize()
     else:
         deltaphi_cpu(obj1["phi"], obj2["phi"], dphi)
@@ -2605,7 +2622,7 @@ def compute_fill_dnn(
     #Pisa DNN
     dnnPisaComb_pred = NUMPY_LIB.zeros(nev_dnn_presel, dtype=NUMPY_LIB.float32)
     dnnPisa_preds = NUMPY_LIB.zeros((len(dnnPisa_models), nev_dnn_presel), dtype=NUMPY_LIB.float32)
-    if parameters["do_dnn_pisa"]:
+    if parameters["do_dnn_pisa"] and len(dnnPisa_models) > 0:
         imodel = 0
         for dnnPisa_model in dnnPisa_models:
             if (not (dnnPisa_model is None)) and nev_dnn_presel > 0:
@@ -2618,7 +2635,7 @@ def compute_fill_dnn(
                 dnnPisa_preds[imodel, :] = NUMPY_LIB.array(dnnPisa_model.predict([
                     NUMPY_LIB.asnumpy(dnnPisa_vars1_arr), NUMPY_LIB.asnumpy(dnnPisa_vars2_arr)], batch_size=len(dnnPisa_vars1_arr))[:, 0])
             imodel += 1
-        compute_dnnPisaComb(dnnPisaComb_pred, dnnPisa_preds, scalars["event"][dnn_presel])
+        compute_dnnPisaComb(dnnPisaComb_pred, dnnPisa_preds, scalars["event"][dnn_presel], use_cuda)
 
     if parameters["do_bdt_ucsd"]:
         hmmthetacs, hmmphics = miscvariables.csangles(
