@@ -786,7 +786,7 @@ def finalize_weights(weights, all_weight_names=None):
         if this_syst == "nominal" or this_syst == "LHEScaleWeight" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight_bcFl" or this_syst == "btag_weight_lFl":
             continue
         ret["nominal"] *= weights[this_syst]["nominal"]
-        #print(ret["nominal"])
+
     #create the variated weights, where just one weight is variated up or down
     for this_syst in all_weight_names:
         if this_syst == "nominal" or this_syst == "mu1_id" or this_syst == "mu1_iso" or this_syst == "mu2_id"or this_syst == "mu2_iso" or this_syst == "btag_weight":
@@ -819,7 +819,7 @@ def finalize_weights(weights, all_weight_names=None):
                         continue
                     #print("Applying ",other_syst, " to variation of ",this_syst) 
                     wtot *= weights[other_syst]["nominal"] 
-                ret["{0}__{1}".format(this_syst, sdir)] = wtot
+    ret["{0}__{1}".format(this_syst, sdir)] = wtot
     
     for k in ret.keys():
         print("finalized weight", k, ret[k].mean())
