@@ -98,6 +98,13 @@ class TestAnalysisSmall(unittest.TestCase):
     def setUp(self):
         pass
 
+    def test_dnn(self):
+        import keras
+        dnn_model = keras.models.load_model("data/DNN27vars_sig_vbf_ggh_bkg_dyvbf_dy105To160_ewk105To160_split_60_40_mod10_191008.h5")
+        inp = np.zeros((1000,26), dtype=np.float32)
+        out = dnn_model.predict(inp) 
+        print(np.mean(out))
+
     def testDataset(self):
         nev = self.dataset.numevents()
         print("Loaded dataset from {0} with {1} events".format(self.dataset.filenames[0], nev))
@@ -139,7 +146,7 @@ class TestAnalysisSmall(unittest.TestCase):
     def test_analyze_function(self):
         import hmumu_utils
         from hmumu_utils import analyze_data, load_puhist_target
-        from analysis_hmumu import JetMetCorrections
+        from analysis_hmumu import JetMetCorrections, BTagWeights
         from coffea.lookup_tools import extractor
         NUMPY_LIB = self.NUMPY_LIB
         hmumu_utils.NUMPY_LIB = self.NUMPY_LIB
@@ -154,6 +161,9 @@ class TestAnalysisSmall(unittest.TestCase):
         
         kwargs = {
             "pu_corrections": {"2016": load_puhist_target("data/pileup/RunII_2016_data.root")},
+            "btag_weights": {
+                "DeepCSV_2016": BTagWeights( tag_name = "DeepCSV_2016LegacySF_V1")
+            },
             "puidreweighting": puid_extractor.make_evaluator(),
             "jetmet_corrections": {
                 "2016": {
@@ -193,7 +203,7 @@ class TestAnalysisSmall(unittest.TestCase):
         nev_zpeak_nominal = np.sum(h["nominal"].contents)
 
         if not USE_CUPY:
-            self.assertAlmostEqual(nev_zpeak_nominal, 0.012528435, places=4)
+            self.assertAlmostEqual(nev_zpeak_nominal, 0.012890133, places=4)
         
         self.assertTrue("Total__up" in h.keys())
         self.assertTrue("Total__down" in h.keys())
@@ -205,3 +215,8 @@ if __name__ == "__main__":
         unittest.findTestCases(sys.modules[__name__]).debug()
     else:
         unittest.main()
+
+    #example on how to test just one thing
+    #t = TestAnalysisSmall()
+    #t.setUpClass()
+    #t.test_dnn()
