@@ -556,7 +556,7 @@ analysis_parameters = {
         "extra_electrons_iso": 0.4, #Check if we want to apply this
         "extra_electrons_id": "mvaFall17V2Iso_WP90",
 
-        "save_dnn_vars": False,
+        "save_dnn_vars": True,
         "dnn_vars_path": "out/dnn_vars",
 
         #If true, apply mjj > cut, otherwise inverse
@@ -644,7 +644,7 @@ analysis_parameters = {
         "categorization_trees": {},
         "do_bdt_ucsd": False,
         "do_dnn_pisa": True,
-        "do_dnn_cit": False,
+        "do_dnn_cit": True,
     },
 }
 #define the histogram binning

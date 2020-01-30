@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument('--async-data', action='store_true', help='Load data on a separate thread, faster but disable for debugging')
     parser.add_argument('--action', '-a', action='append', help='List of analysis steps to do', choices=['analyze', 'merge'], required=False, default=None)
     parser.add_argument('--nthreads', '-t', action='store', help='Number of CPU threads or workers to use', type=int, default=4, required=False)
-    parser.add_argument('--datapath', '-p', action='store', help='Input file path that contains the CMS /store/... folder, e.g. /mnt/hadoop', required=False, default="/storage/user/idutta/Hmm/Vectorized/my_fork_vbfsync/hepaccelerate-cms/")
+    parser.add_argument('--datapath', '-p', action='store', help='Input file path that contains the CMS /store/... folder, e.g. /mnt/hadoop', required=False, default="/storage/user/jpata")
     parser.add_argument('--maxchunks', '-m', action='store', help='Maximum number of files to process for each dataset', default=1, type=int)
     parser.add_argument('--chunksize', '-c', action='store', help='Number of files to process simultaneously (larger is faster, but uses more memory)', default=1, type=int)
     parser.add_argument('--out', action='store', help='Output location', default='out', type=str)
@@ -330,8 +330,8 @@ class AnalysisCorrections:
 
             #load DNN model
             import keras
-            self.dnn_model = keras.models.load_model("data/DNN27vars_sig_vbf_ggh_bkg_dyvbf_dy105To160_ewk105To160_split_60_40_mod10_191008.h5")
-            self.dnn_normfactors = np.load("data/DNN27vars_sig_vbf_ggh_bkg_dyvbf_dy105To160_ewk105To160_split_60_40_mod10_191008.npy")
+            self.dnn_model = keras.models.load_model("data/DNN27vars_sig_vbf_ggh_bkg_dyvbf_dy105To160_ewk105To160_split_60_40_mod10_200109.h5")
+            self.dnn_normfactors = np.load("data/DNN27vars_sig_vbf_ggh_bkg_dyvbf_dy105To160_ewk105To160_split_60_40_mod10_200109.npy")
 
             if args.use_cuda:
                 import cupy
