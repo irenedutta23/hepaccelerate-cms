@@ -526,6 +526,7 @@ def analyze_data(
             )
             weights_in_dnn_presel = apply_mask(weights_selected, dnn_presel)
           
+            
             if parameters["do_bdt_ucsd"]: 
                 if not ((bdt_ucsd is None)):
                     bdt_pred = evaluate_bdt_ucsd(dnn_vars, bdt_ucsd)
@@ -640,7 +641,10 @@ def analyze_data(
                         weights_selected,
                         use_cuda
                     )
-
+                    mk = (dnn_presel & massbin_msk & msk_cat)[dnn_presel]
+                    m1k = (dnn_presel & massbin_msk & msk_cat)
+                    import pdb;pdb.set_trace();
+                    print(dnn_vars["dEta_jj"][mk],",",leading_jet["pt"][m1k],",",leading_jet["eta"][m1k],",",subleading_jet["pt"][m1k],",",subleading_jet["eta"][m1k])
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
