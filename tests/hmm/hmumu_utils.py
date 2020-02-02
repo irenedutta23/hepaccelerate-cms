@@ -42,7 +42,7 @@ NUMPY_LIB = None
 #debug = True
 debug = False
 #event IDs for which to print out detailed information
-debug_event_ids = [37410,37416,37463,37464]
+debug_event_ids = [37464]
 
 #list to collect performance data in
 global_metrics = []
@@ -345,8 +345,8 @@ def analyze_data(
         btagWeights, btagWeights_up, btagWeights_down = get_btag_weights_shape(jets_passing_id, btag_weights, dataset_era, scalars, parameters["jet_pt_subleading"][dataset_era])
         
         weights_individual["btag_weight"] = {"nominal": btagWeights, "up": NUMPY_LIB.ones_like(btagWeights), "down": NUMPY_LIB.ones_like(btagWeights)}
-        #weights_individual["btag_weight_bcFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[0]*btagWeights_up[1], "down": btagWeights_down[0]*btagWeights_down[1]}
-        #weights_individual["btag_weight_lFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[2], "down": btagWeights_down[2]}
+        weights_individual["btag_weight_bcFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[0]*btagWeights_up[1], "down": btagWeights_down[0]*btagWeights_down[1]}
+        weights_individual["btag_weight_lFl"] = {"nominal": NUMPY_LIB.ones_like(btagWeights), "up": btagWeights_up[2], "down": btagWeights_down[2]}
     #compute variated weights here to ensure the nominal weight contains all possible other weights  
     compute_event_weights(parameters, weights_individual, scalars,
         genweight_scalefactor, gghnnlopsw, ZpTw,
@@ -355,6 +355,7 @@ def analyze_data(
     #actually multiply all the weights together with the appropriate up/down variations.
     #creates a 1-level dictionary with weights "nominal", "puweight__up", "puweight__down", ..." 
     weights_final = finalize_weights(weights_individual)
+    import pdb;pdb.set_trace();
     '''
     if parameters["do_lepton_sf"] and is_mc:
         lepton_sf_values = compute_lepton_sf(leading_muon, subleading_muon,
@@ -652,8 +653,7 @@ def analyze_data(
                     )
                     mk = (dnn_presel & massbin_msk & msk_cat)[dnn_presel]
                     m1k = (dnn_presel & massbin_msk & msk_cat)
-                    import pdb;pdb.set_trace();
-                    print(dnn_vars["dEta_jj"][mk],",",leading_jet["pt"][m1k],",",leading_jet["eta"][m1k],",",subleading_jet["pt"][m1k],",",subleading_jet["eta"][m1k])
+                    #print(dnn_vars["dEta_jj"][mk],",",leading_jet["pt"][m1k],",",leading_jet["eta"][m1k],",",subleading_jet["pt"][m1k],",",subleading_jet["eta"][m1k])
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
@@ -1833,13 +1833,13 @@ def get_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
                 p_jetWt_down[i][pt_eta_mask] = 1.
                 compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
 
-            if debug:
-                for evtid in debug_event_ids:
-                    idx = np.where(scalars["event"] == evtid)[0][0]
-                    print("jets for b tag")
-                    jaggedstruct_print(jets, idx,
-                                       ["pt", "eta", "phi","hadronFlavour", "btagDeepB"])
-                    print(i,eventweight_btag_up[i][idx],eventweight_btag_down[i][idx])
+        if debug:
+            for evtid in debug_event_ids:
+                idx = np.where(scalars["event"] == evtid)[0][0]
+                print("jets for b tag")
+                jaggedstruct_print(jets, idx,
+                                   ["pt", "eta", "phi","hadronFlavour", "btagDeepB"])
+                print(i,eventweight_btag_up[i][idx],eventweight_btag_down[i][idx])
     return eventweight_btag , eventweight_btag_up, eventweight_btag_down
 
 @numba.njit(parallel=True)
@@ -2958,13 +2958,13 @@ def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepeff
         if debug:
             print("sf_iso: ", sf_iso.mean(), "+-", sf_iso.std())
             print("sf_id: ", sf_id.mean(), "+-", sf_id.std())
-            print("sf_trig: ", sf_trig.mean(), "+-", sf_trig.std())
+            #print("sf_trig: ", sf_trig.mean(), "+-", sf_trig.std())
             print("sf_id_up: ", sf_id_up.mean(), "+-", sf_id_up.std())
             print("sf_id_down: ", sf_id_down.mean(), "+-", sf_id_down.std())
             print("sf_iso_up: ", sf_iso_up.mean(), "+-", sf_iso_up.std())
             print("sf_iso_down: ", sf_iso_down.mean(), "+-", sf_iso_down.std())
-            print("sf_trig_up: ", sf_trig_up.mean(), "+-", sf_trig_up.std())
-            print("sf_trig_down: ", sf_trig_down.mean(), "+-", sf_trig_down.std())
+            #print("sf_trig_up: ", sf_trig_up.mean(), "+-", sf_trig_up.std())
+            #print("sf_trig_down: ", sf_trig_down.mean(), "+-", sf_trig_down.std())
 
         sfs_id += [sf_id]
         sfs_iso += [sf_iso]
