@@ -343,6 +343,7 @@ def analyze_data(
     compute_event_weights(parameters, weights_individual, scalars,
         genweight_scalefactor, gghnnlopsw, ZpTw,
         LHEScalew, analysis_corrections.pu_corrections, is_mc, dataset_era, dataset_name, use_cuda)
+
     #actually multiply all the weights together with the appropriate up/down variations.
     #creates a 1-level dictionary with weights "nominal", "puweight__up", "puweight__down", ..." 
     weights_final = finalize_weights(weights_individual)
