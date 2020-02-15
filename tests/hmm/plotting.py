@@ -193,7 +193,7 @@ def plot_variations(args):
             )
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles[::-1], labels[::-1], frameon=False, fontsize=4, loc=1, ncol=2)
-    plt.savefig(_outdir + "/{0}_{1}.pdf".format(mc_samp, unc), bbox_inches="tight")
+    plt.savefig(_outdir + "/{0}_{1}.png".format(mc_samp, unc), bbox_inches="tight")
     plt.close(fig)
     del fig
 
@@ -735,7 +735,7 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
         dcof.write("RZ rateParam {0} dy_0j 1 \n".format(cat.full_name))  
         dcof.write("RZ rateParam {0} dy_1j 1 \n".format(cat.full_name))  
         dcof.write("RZ rateParam {0} dy_2j 1 \n".format(cat.full_name)) 
-        dcof.write("REWZ rateParam {0} ewk_lljj_mll50_mjj120 1 \n".format(cat.full_name))
+        #dcof.write("REWZ rateParam {0} ewk_lljj_mll50_mjj120 1 \n".format(cat.full_name))
     elif ("h_peak" in cat.full_name) or ("h_sideband" in cat.full_name):
         dcof.write("R rateParam {0} dy_m105_160_amc 1 \n".format(cat.full_name))           
         dcof.write("R rateParam {0} dy_m105_160_vbf_amc 1 \n".format(cat.full_name))
