@@ -9,7 +9,7 @@ import uproot
 import copy
 import multiprocessing
 
-from pars import catnames, varnames, analysis_names, shape_systematics, controlplots_shape, genweight_scalefactor
+from pars import catnames, varnames, analysis_names, shape_systematics, controlplots_shape, genweight_scalefactor, lhe_pdf_variations
 from pars import process_groups, colors, extra_plot_kwargs,proc_grps,combined_signal_samples
 
 from scipy.stats import wasserstein_distance
@@ -371,7 +371,7 @@ def mask_inv_mass(hist):
     hist["contents_w2"][bin_idx1:bin_idx2] = 0.0
 
 def create_variated_histos(proc,
-    hdict,
+    hdict, era,
     baseline="nominal",
         variations=shape_systematics):
  
@@ -383,6 +383,7 @@ def create_variated_histos(proc,
     ret = Results(OrderedDict())
     ret["nominal"] = hbase
     for variation in variations:
+        print(variation,", ",proc)
         for vdir in ["up", "down"]:
             print("create_variated_histos", variation, vdir)
             sname = "{0}__{1}".format(variation, vdir)
@@ -417,14 +418,58 @@ def create_variated_histos(proc,
             h_nom_up.contents[k]=h_nom_up.contents[k]*np.sum(hbase.contents)/sum_nom_up
             h_nom_down.contents[k]=h_nom_down.contents[k]*np.sum(hbase.contents)/sum_nom_down
 
-        if('dy' in proc):
+        if('dy' in proc and '160' in proc):
             ret['DYLHEScaleWeightUp']=h_nom_up
             ret['DYLHEScaleWeightDown']=h_nom_down
-        elif('ewk' in proc):
+        elif('ewk' in proc and '160' in proc):
             ret['EWZLHEScaleWeightUp']=h_nom_up
             ret['EWZLHEScaleWeightDown']=h_nom_down
+        elif('dy' in proc):
+            ret['DYLHEScaleWeightZUp']=h_nom_up
+            ret['DYLHEScaleWeightZDown']=h_nom_down
+        elif('ewk' in proc and '160' in proc):
+            ret['EWZLHEScaleWeightZUp']=h_nom_up
+            ret['EWZLHEScaleWeightZDown']=h_nom_down
+
+    if('LHEPdfWeight' in variations):
+        h_pdf =[]
+        h_pdf_up = copy.deepcopy(hbase)
+        h_pdf_down = copy.deepcopy(hbase)
+
+        if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "vh" in proc or "tth" in proc:
+            #import pdb; pdb.set_trace();
+            for i in range(lhe_pdf_variations[str(era)]):
+                sname = 'LHEPdfWeight__{0}'.format(i)
+                h_pdf.append(hdict[sname])
+            for k in range(len(h_pdf[0].contents)):
+                rms_up = 0.0
+                rms_down = 0.0
+                n_up=0.0
+                n_down=0.0
+                for i in range(lhe_pdf_variations[str(era)]):
+                    #print(i,k)
+                    if(h_pdf[i].contents[k]>h_pdf_up.contents[k]):
+                        rms_up = rms_up + (h_pdf[i].contents[k]-h_pdf_up.contents[k])**2
+                        n_up = n_up + 1.0
+                    elif(h_pdf[i].contents[k]<h_pdf_down.contents[k]):
+                        rms_down = rms_down + (h_pdf[i].contents[k]-h_pdf_down.contents[k])**2
+                        n_down = n_down + 1.0
+                        rms_up = np.sqrt(rms_up)/n_up
+                        rms_down = np.sqrt(rms_down)/n_down
+                        h_pdf_up.contents[k] = rms_up
+                        h_pdf_down.contents[k] = rms_down
+            #remove the normalization aspect from pdf
+            sum_pdf_up=np.sum(h_pdf_up.contents)
+            sum_pdf_down=np.sum(h_pdf_down.contents)
+            for k in range(len(h_pdf_up.contents)):
+                h_pdf_up.contents[k]=h_pdf_up.contents[k]*np.sum(hbase.contents)/sum_pdf_up
+                h_pdf_down.contents[k]=h_pdf_down.contents[k]*np.sum(hbase.contents)/sum_pdf_down
+
+        ret['LHEPdfWeightUp']=h_pdf_up
+        ret['LHEPdfWeightDown']=h_pdf_down
+        
     return ret
-def create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs):
+def create_datacard(dict_procs, parameter_name, all_processes, histname, baseline, variations, weight_xs, era):
     
     ret = Results(OrderedDict())
     event_counts = {}
@@ -440,7 +485,7 @@ def create_datacard(dict_procs, parameter_name, all_processes, histname, baselin
         if proc == "data":
             _variations = []
 
-        variated_histos = create_variated_histos(proc, rr, baseline, _variations)
+        variated_histos = create_variated_histos(proc, rr, era, baseline, _variations)
 
         for syst_name, histo in variated_histos.items():
             if proc != "data":
@@ -495,12 +540,13 @@ def create_datacard_combine(
     variations,
     common_scale_uncertainties,
     scale_uncertainties,
-    txtfile_name
+    txtfile_name,
+    era
     ):
      
     dc, event_counts = create_datacard(
         dict_procs, parameter_name, all_processes,
-        histname, baseline, variations, weight_xs)
+        histname, baseline, variations, weight_xs, era)
     rootfile_name = txtfile_name.replace(".txt", ".root")
     
     save_datacard(dc, rootfile_name)
@@ -918,7 +964,8 @@ if __name__ == "__main__":
                     shape_systematics,
                     common_scale_uncertainties,
                     scale_uncertainties,
-                    outdir_datacards + "/{0}.txt".format(var)
+                    outdir_datacards + "/{0}.txt".format(var),
+                    era
                 )]
 
                 hdata = res["data"][analysis][var]["nominal"]
@@ -937,10 +984,10 @@ if __name__ == "__main__":
                                 plot_args_shape_syst += [(
                                     histos, hdata, mc_samp, analysis,
                                     var, "nominal", weight_xs, int_lumi, outdir, era, unc)]
-        rets = list(pool.map(make_pdf_plot, plot_args))
+        #rets = list(pool.map(make_pdf_plot, plot_args))
         #rets = list(pool.map(make_pdf_plot, plot_args_weights_off))
         rets = list(pool.map(create_datacard_combine_wrap, datacard_args))
-        rets = list(pool.map(plot_variations, plot_args_shape_syst))
+        #rets = list(pool.map(plot_variations, plot_args_shape_syst))
 
         #for args, retval in zip(datacard_args, rets):
         #    res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir, datataking_year = args

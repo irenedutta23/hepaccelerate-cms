@@ -391,7 +391,7 @@ jec_unc = ['Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', '
 
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl"]
+shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl"]#,"LHEPdfWeight"]
 common_scale_uncertainties = {
     "lumi": 1.025,
 }
@@ -416,7 +416,11 @@ scale_uncertainties = {
     "st_tw_top": {"STxsec": 1.05},
     "st_tw_antitop": {"STxsec": 1.05},
 }
-
+lhe_pdf_variations ={
+    "2016":103,
+    "2017":33,
+    "2018":33
+}
 data_runs = {
     "2017": [
         (294927, 297019, "RunA"),
@@ -583,7 +587,7 @@ analysis_parameters = {
 
         "save_dnn_vars": False,
         "dnn_vars_path": "out/dnn_vars",
-
+        "n_max_pdfweights": {"2016": 103, "2017": 33, "2018": 33},
         #If true, apply mjj > cut, otherwise inverse
         "vbf_filter_mjj_cut": 350,
         "vbf_filter": {
