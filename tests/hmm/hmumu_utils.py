@@ -662,7 +662,7 @@ def analyze_data(
                             for imodel in range(len(dnnPisa_predictions)) if (len(dnnPisa_predictions)!=0)
                         ]
                         + [
-                            (dnn_vars["dnnPisa_pred"+str(imodel)], "dnnPisa_pred2_"+str(imodel), histo_bins["dnnPisa_pred2"][massbin_name])
+                            (dnn_vars["dnnPisa_pred"+str(imodel)], "dnnPisa_pred2_"+str(imodel), histo_bins["dnn_pred2"][massbin_name])
                             for imodel in range(len(dnnPisa_predictions)) if (len(dnnPisa_predictions)!=0)
                         ]
                         ,

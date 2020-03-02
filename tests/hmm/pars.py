@@ -262,22 +262,6 @@ extra_plot_kwargs = {
         "xbins": "uniform",
         "do_log": True,
     },
-
-    "hist__dimuon_invmass_z_peak_cat5__dnnPisa_pred2": {
-        "xbins": "uniform",
-        "do_log": True
-    },
-    "hist__dimuon_invmass_h_peak_cat5__dnnPisa_pred2": {
-        "xbins": "uniform",
-        "xlim": (1, 9),
-        "ylim": (0, 50),
-        "mask_data_from_bin": 2,
-    },
-    "hist__dimuon_invmass_h_sideband_cat5__dnnPisa_pred2": {
-        "xbins": "uniform",
-        "do_log": True,
-    },
-
     "hist__dimuon_invmass_z_peak_cat5__bdt_ucsd": {
         "do_log": True,
     },
@@ -510,7 +494,6 @@ varnames = {
     "dRmin_mj": "min $\Delta R (\mu j)$",
     "dijet_inv_mass": "dijet invariant mass $M_{jj} [GeV]",
     "dnn_pred2": "signal DNN", 
-    "dnnPisa_pred2": "signal Pisa DNN",
     "eta_mmjj": "$\eta_{\mu\mu j_1 j_2}$",
     "hmmthetacs": "$\theta_{CS}$",
     "inv_mass": "$M_{\mu\mu}$",
@@ -678,7 +661,6 @@ analysis_parameters = {
             "Higgs_mass": (110, 150, 41),
             "dnn_pred": (0, 1, 1001),
             "dnn_pred2": (0, 1, 11),
-            "dnnPisa_pred2": (0, 1, 11),
             "bdt_ucsd": (-1, 1, 11),
             "bdt2j_ucsd": (-1, 1, 11),
             "bdt01j_ucsd": (-1, 1, 11),
@@ -724,5 +706,4 @@ histo_bins["dnn_pred2"] = {
     "h_sideband": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
 }
 
-histo_bins["dnnPisa_pred2"] = histo_bins["dnn_pred2"]
 analysis_parameters["baseline"]["histo_bins"] = histo_bins
