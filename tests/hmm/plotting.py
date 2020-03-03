@@ -485,7 +485,7 @@ def create_variated_histos(proc,
                 h_nom = h_nom + h_pdf[i].contents 
             h_nom = h_nom/lhe_pdf_variations[str(era)]
             for k in range(len(h_pdf[0].contents)):
-                h_pdf_nom[k] = h_nom[k]
+                h_pdf_nom.contents[k] = h_nom[k]
                 rms_up = 0.0
                 rms_down = 0.0
                 n_up=0.0
