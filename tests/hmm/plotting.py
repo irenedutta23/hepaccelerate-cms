@@ -242,8 +242,8 @@ def plot_variations(args):
                 elif(h_pdf[i].contents[k]<h_pdf_down.contents[k]):
                     rms_down = rms_down + (h_pdf[i].contents[k]-h_pdf_down.contents[k])**2
                     n_down = n_down + 1.0
-            if(n_up!=0.0): rms_up = np.sqrt(rms_up)/n_up
-            if(n_down!=0.0): rms_down = np.sqrt(rms_down)/n_down
+            if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
+            if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
             h_pdf_up.contents[k] = rms_up
             h_pdf_down.contents[k] = rms_down
         #remove the normalization aspect from pdf
@@ -492,8 +492,8 @@ def create_variated_histos(proc,
                     elif(h_pdf[i].contents[k]<h_pdf_down.contents[k]):
                         rms_down = rms_down + (h_pdf[i].contents[k]-h_pdf_down.contents[k])**2
                         n_down = n_down + 1.0
-                if(n_up!=0.0): rms_up = np.sqrt(rms_up)/n_up
-                if(n_down!=0.0): rms_down = np.sqrt(rms_down)/n_down
+                if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
+                if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
                 h_pdf_up.contents[k] = rms_up
                 h_pdf_down.contents[k] = rms_down
             #remove the normalization aspect from pdf
@@ -607,7 +607,7 @@ def create_datacard_combine(
     for cat in categories:
         filenames[cat.full_name] = rootfile_name
 
-    PrintDatacard(categories, event_counts, filenames, txtfile_name)
+    PrintDatacard(categories, dict_procs, era, event_counts, filenames, txtfile_name)
 
 from uproot_methods.classes.TH1 import from_numpy
 
@@ -714,7 +714,25 @@ class Category:
                 self.scale_uncertainties[proc] = {}
             self.scale_uncertainties[proc].update(v)
 
-def PrintDatacard(categories, event_counts, filenames, ofname):
+def calculate_LHEPdf_norm(histos, era):
+    h_pdf = []
+    for i in range(lhe_pdf_variations[str(era)]):
+        sname = 'LHEPdfWeight__{0}'.format(i)
+        h_pdf.append(histos[sname])
+    h_nom = np.zeros_like(histos["nominal"].contents)
+    for i in range(lhe_pdf_variations[str(era)]):
+        h_nom = h_nom + h_pdf[i].contents
+
+    h_nom = h_nom/lhe_pdf_variations[str(era)]
+    var = 0.0
+    for i in range(lhe_pdf_variations[str(era)]):
+        var = var + (np.sum(h_pdf[i].contents) - np.sum(h_nom))**2
+
+    var = np.sqrt(var/(lhe_pdf_variations[str(era)]-1))
+    if(np.sum(h_nom)!=0.0): var = var/np.sum(h_nom)
+    return var
+
+def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     dcof = open(ofname, "w")
     
     number_of_bins = len(categories)
@@ -835,6 +853,16 @@ def PrintDatacard(categories, event_counts, filenames, ofname):
                 else:
                     dcof.write("-")
                 dcof.write("\t")
+        dcof.write("\n")
+    dcof.write("LHEPdfWeight_norm" + "\t lnN \t")
+    for cat in categories:
+        for proc in cat.processes:
+            if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "zh_125" in proc or "wmh_125" in proc or "wph_125" in proc or "tth" in proc:
+                Pdf_norm = calculate_LHEPdf_norm(dict_procs[proc], era)
+                dcof.write("{0:.2f}".format(1.0 + Pdf_norm))
+            else:
+                dcof.write("-")
+            dcof.write("\t")
         dcof.write("\n")
 
 
@@ -1028,10 +1056,10 @@ if __name__ == "__main__":
                                 plot_args_shape_syst += [(
                                     histos, hdata, mc_samp, analysis,
                                     var, "nominal", weight_xs, int_lumi, outdir, era, unc)]
-        rets = list(pool.map(make_pdf_plot, plot_args))
+        #rets = list(pool.map(make_pdf_plot, plot_args))
         #rets = list(pool.map(make_pdf_plot, plot_args_weights_off))
         rets = list(pool.map(create_datacard_combine_wrap, datacard_args))
-        rets = list(pool.map(plot_variations, plot_args_shape_syst))
+        #rets = list(pool.map(plot_variations, plot_args_shape_syst))
 
         #for args, retval in zip(datacard_args, rets):
         #    res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir, datataking_year = args
