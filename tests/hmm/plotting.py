@@ -477,10 +477,11 @@ def create_variated_histos(proc,
         h_pdf_down = copy.deepcopy(hbase)
         h_pdf_nom = copy.deepcopy(hbase)
         if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "zh_125" in proc or "wmh_125" in proc or "wph_125" in proc or "tth" in proc:
-            h_nom = np.zeros_like(histos["nominal"].contents)
+            h_nom = np.zeros_like(hbase.contents)
             for i in range(lhe_pdf_variations[str(era)]):
                 sname = 'LHEPdfWeight__{0}'.format(i)
                 h_pdf.append(hdict[sname])
+            for i in range(lhe_pdf_variations[str(era)]):
                 h_nom = h_nom + h_pdf[i].contents 
             h_nom = h_nom/lhe_pdf_variations[str(era)]
             for k in range(len(h_pdf[0].contents)):
