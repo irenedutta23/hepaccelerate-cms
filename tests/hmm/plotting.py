@@ -425,7 +425,7 @@ def create_variated_histos(proc,
     ret["nominal"] = hbase
     for variation in variations:
         for vdir in ["up", "down"]:
-            print("create_variated_histos", variation, vdir)
+            #print("create_variated_histos", variation, vdir)
             sname = "{0}__{1}".format(variation, vdir)
             if sname.endswith("__up"):
                 sname2 = sname.replace("__up", "Up")
@@ -475,12 +475,16 @@ def create_variated_histos(proc,
         h_pdf =[]
         h_pdf_up = copy.deepcopy(hbase)
         h_pdf_down = copy.deepcopy(hbase)
-
+        h_pdf_nom = copy.deepcopy(hbase)
         if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "zh_125" in proc or "wmh_125" in proc or "wph_125" in proc or "tth" in proc:
+            h_nom = np.zeros_like(histos["nominal"].contents)
             for i in range(lhe_pdf_variations[str(era)]):
                 sname = 'LHEPdfWeight__{0}'.format(i)
                 h_pdf.append(hdict[sname])
+                h_nom = h_nom + h_pdf[i].contents 
+            h_nom = h_nom/lhe_pdf_variations[str(era)]
             for k in range(len(h_pdf[0].contents)):
+                h_pdf_nom[k] = h_nom[k]
                 rms_up = 0.0
                 rms_down = 0.0
                 n_up=0.0
@@ -502,7 +506,7 @@ def create_variated_histos(proc,
             for k in range(len(h_pdf_up.contents)):
                 if(sum_pdf_up!=0.0): h_pdf_up.contents[k]=h_pdf_up.contents[k]*np.sum(hbase.contents)/sum_pdf_up
                 if(sum_pdf_down!=0.0): h_pdf_down.contents[k]=h_pdf_down.contents[k]*np.sum(hbase.contents)/sum_pdf_down
-            
+        ret['LHEPdfNom']=h_pdf_nom
         ret['LHEPdfWeightUp']=h_pdf_up
         ret['LHEPdfWeightDown']=h_pdf_down
         
@@ -722,7 +726,6 @@ def calculate_LHEPdf_norm(histos, era):
     h_nom = np.zeros_like(histos["nominal"].contents)
     for i in range(lhe_pdf_variations[str(era)]):
         h_nom = h_nom + h_pdf[i].contents
-
     h_nom = h_nom/lhe_pdf_variations[str(era)]
     var = 0.0
     for i in range(lhe_pdf_variations[str(era)]):
@@ -854,12 +857,23 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
                     dcof.write("-")
                 dcof.write("\t")
         dcof.write("\n")
+    # print out LHE PDf inclusive xs scale uncert
     dcof.write("LHEPdfWeight_norm" + "\t lnN \t")
     for cat in categories:
         for proc in cat.processes:
-            if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "zh_125" in proc or "wmh_125" in proc or "wph_125" in proc or "tth" in proc:
-                Pdf_norm = calculate_LHEPdf_norm(dict_procs[proc], era)
-                dcof.write("{0:.2f}".format(1.0 + Pdf_norm))
+            if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "vh" in proc or "tth" in proc:
+                
+                if("vh" not in proc):
+                    Pdf_norm = calculate_LHEPdf_norm(dict_procs[proc], era)
+                    dcof.write("{0:.2f}".format(1.0 + Pdf_norm))
+                else:
+                    Pdf_norm_vh =[]
+                    Pdf_norm_vh.append(calculate_LHEPdf_norm(dict_procs["wph_125"], era))
+                    Pdf_norm_vh.append(calculate_LHEPdf_norm(dict_procs["wmh_125"], era))
+                    Pdf_norm_vh.append(calculate_LHEPdf_norm(dict_procs["zh_125"], era))
+                    sorted(Pdf_norm_vh, reverse = True)
+                    dcof.write("{0:.2f}".format(1.0 + Pdf_norm_vh[0]))
+                    
             else:
                 dcof.write("-")
             dcof.write("\t")
@@ -1056,10 +1070,10 @@ if __name__ == "__main__":
                                 plot_args_shape_syst += [(
                                     histos, hdata, mc_samp, analysis,
                                     var, "nominal", weight_xs, int_lumi, outdir, era, unc)]
-        #rets = list(pool.map(make_pdf_plot, plot_args))
+        rets = list(pool.map(make_pdf_plot, plot_args))
         #rets = list(pool.map(make_pdf_plot, plot_args_weights_off))
         rets = list(pool.map(create_datacard_combine_wrap, datacard_args))
-        #rets = list(pool.map(plot_variations, plot_args_shape_syst))
+        rets = list(pool.map(plot_variations, plot_args_shape_syst))
 
         #for args, retval in zip(datacard_args, rets):
         #    res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir, datataking_year = args
