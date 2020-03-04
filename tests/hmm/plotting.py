@@ -244,8 +244,8 @@ def plot_variations(args):
                     n_down = n_down + 1.0
             if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
             if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
-            h_pdf_up.contents[k] = rms_up
-            h_pdf_down.contents[k] = rms_down
+            h_pdf_up.contents[k] = hbase.contents[k] + rms_up
+            h_pdf_down.contents[k] = hbase.contents[k] - rms_down
         #remove the normalization aspect from pdf
         sum_pdf_up=np.sum(h_pdf_up.contents)
         sum_pdf_down=np.sum(h_pdf_down.contents)
@@ -490,6 +490,7 @@ def create_variated_histos(proc,
                 rms_down = 0.0
                 n_up=0.0
                 n_down=0.0
+                
                 for i in range(lhe_pdf_variations[str(era)]):
                     if(h_pdf[i].contents[k]>h_pdf_up.contents[k]):
                         rms_up = rms_up + (h_pdf[i].contents[k]-h_pdf_up.contents[k])**2
@@ -499,8 +500,8 @@ def create_variated_histos(proc,
                         n_down = n_down + 1.0
                 if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
                 if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
-                h_pdf_up.contents[k] = rms_up
-                h_pdf_down.contents[k] = rms_down
+                h_pdf_up.contents[k] = hbase.contents[k] + rms_up
+                h_pdf_down.contents[k] = hbase.contents[k] - rms_down
             #remove the normalization aspect from pdf
             sum_pdf_up=np.sum(h_pdf_up.contents)
             sum_pdf_down=np.sum(h_pdf_down.contents)
