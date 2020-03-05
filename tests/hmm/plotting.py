@@ -231,21 +231,12 @@ def plot_variations(args):
             sname = 'LHEPdfWeight__{0}'.format(i)
             h_pdf.append(res[mc_samp][sname]* weight_xs[mc_samp])
         for k in range(len(h_pdf[0].contents)):
-            rms_up = 0.0
-            rms_down = 0.0
-            n_up=0.0
-            n_down=0.0
+            rms = 0.0
             for i in range(lhe_pdf_variations[str(datataking_year)]):
-                if(h_pdf[i].contents[k]>h_pdf_up.contents[k]):
-                    rms_up = rms_up + (h_pdf[i].contents[k]-h_pdf_up.contents[k])**2
-                    n_up = n_up + 1.0
-                elif(h_pdf[i].contents[k]<h_pdf_down.contents[k]):
-                    rms_down = rms_down + (h_pdf[i].contents[k]-h_pdf_down.contents[k])**2
-                    n_down = n_down + 1.0
-            if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
-            if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
-            h_pdf_up.contents[k] = hnom.contents[k] + rms_up
-            h_pdf_down.contents[k] = hnom.contents[k] - rms_down
+                    rms = rms + (h_pdf[i].contents[k]-hnom.contents[k])**2
+            rms = np.sqrt(rms/(lhe_pdf_variations[str(datataking_year)]-1))
+            h_pdf_up.contents[k] = hnom.contents[k] + rms
+            h_pdf_down.contents[k] = hnom.contents[k] - rms
         #remove the normalization aspect from pdf
         sum_pdf_up=np.sum(h_pdf_up.contents)
         sum_pdf_down=np.sum(h_pdf_down.contents)
@@ -486,22 +477,12 @@ def create_variated_histos(proc,
             h_nom = h_nom/lhe_pdf_variations[str(era)]
             for k in range(len(h_pdf[0].contents)):
                 h_pdf_nom.contents[k] = h_nom[k]
-                rms_up = 0.0
-                rms_down = 0.0
-                n_up=0.0
-                n_down=0.0
-                
+                rms = 0.0
                 for i in range(lhe_pdf_variations[str(era)]):
-                    if(h_pdf[i].contents[k]>h_pdf_up.contents[k]):
-                        rms_up = rms_up + (h_pdf[i].contents[k]-h_pdf_up.contents[k])**2
-                        n_up = n_up + 1.0
-                    elif(h_pdf[i].contents[k]<h_pdf_down.contents[k]):
-                        rms_down = rms_down + (h_pdf[i].contents[k]-h_pdf_down.contents[k])**2
-                        n_down = n_down + 1.0
-                if(n_up!=0.0): rms_up = np.sqrt(rms_up/n_up)
-                if(n_down!=0.0): rms_down = np.sqrt(rms_down/n_down)
-                h_pdf_up.contents[k] = hbase.contents[k] + rms_up
-                h_pdf_down.contents[k] = hbase.contents[k] - rms_down
+                    rms = rms + (h_pdf[i].contents[k]-hbase.contents[k])**2
+                rms = np.sqrt(rms/(lhe_pdf_variations[str(era)]-1))
+                h_pdf_up.contents[k] = hbase.contents[k] + rms
+                h_pdf_down.contents[k] = hbase.contents[k] - rms
             #remove the normalization aspect from pdf
             sum_pdf_up=np.sum(h_pdf_up.contents)
             sum_pdf_down=np.sum(h_pdf_down.contents)
