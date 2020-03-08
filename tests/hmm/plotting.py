@@ -702,6 +702,7 @@ class Category:
             self.scale_uncertainties[proc].update(v)
 
 def calculate_LHEPdf_norm(histos, era):
+    #Based on https://arxiv.org/pdf/1510.03865.pdf
     h_pdf = []
     for i in range(lhe_pdf_variations[str(era)]):
         sname = 'LHEPdfWeight__{0}'.format(i)
@@ -714,7 +715,9 @@ def calculate_LHEPdf_norm(histos, era):
     for i in range(lhe_pdf_variations[str(era)]):
         var = var + (np.sum(h_pdf[i].contents) - np.sum(h_nom))**2
 
-    var = np.sqrt(var/(lhe_pdf_variations[str(era)]-1))
+    if(era == 2016): 
+        var = np.sqrt(var/(lhe_pdf_variations[str(era)]-1)) # MC replicas for 2016
+    else: var = np.sqrt(var) #Hessian weights for 2017 and 2018
     if(np.sum(h_nom)!=0.0): var = var/np.sum(h_nom)
     return var
 
