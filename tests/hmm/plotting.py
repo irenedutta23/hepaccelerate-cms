@@ -848,7 +848,13 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     #print out shape uncertainties
     for syst in all_shape_uncerts:
         if('LHEScale' in syst): continue
-        dcof.write(syst + "\t shape \t")
+        if('jer' in syst):
+            if len(syst) != len('jer'):
+                dcof.write(syst + "\t shapeU \t")
+            else:
+                dcof.write(syst + "\t shape \t")
+        else : 
+            dcof.write(syst + "\t shape \t")
         for cat in categories:
             for proc in cat.processes:
                 if proc in remove_proc:

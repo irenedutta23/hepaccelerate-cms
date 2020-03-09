@@ -406,7 +406,8 @@ jec_unc = ['Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', '
 
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-shape_systematics = jec_unc + ["jer", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl","LHEPdfWeight","EWZ105160PS"]
+
+shape_systematics = jec_unc + ["jer", "jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl","LHEPdfWeight","EWZ105160PS"]
 common_scale_uncertainties = {
     "lumi": 1.025,
 }
@@ -564,7 +565,15 @@ analysis_parameters = {
         "do_geofit": True,
         
         "do_jec": True,
-        "do_jer": {"2016": False, "2017": True, "2018": True},
+        "do_jer": {"2016": True, "2017": True, "2018": True},
+        "jer_pt_eta_bins" : {
+            "jerB1": {"eta" : [0,1.93], "pt" : 0.0},
+            "jerB2": {"eta" : [1.93,2.5], "pt" : 0.0},
+            "jerEC1": {"eta" : [2.5,3.1], "pt" : 0.0},
+            "jerEC2": {"eta" : [2.5,3.1], "pt" : 50.0},
+            "jerF1": {"eta" : [3.1,10.0], "pt" : 0.0},
+            "jerF2": {"eta" : [3.1,10.0], "pt" : 50.0},
+        },
         "jec_tag": {"2016": "Summer16_07Aug2017_V11", "2017": "Fall17_17Nov2017_V32", "2018": "Autumn18_V19"}, 
         "jet_mu_dr": 0.4,
         "jet_pt_leading": {"2016": 35.0, "2017": 35.0, "2018": 35.0},
