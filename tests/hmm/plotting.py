@@ -623,7 +623,7 @@ def create_datacard_combine(
  
     all_processes.pop(all_processes.index("data"))
     combined_all_processes.pop(combined_all_processes.index("data"))
-    shape_uncertainties = {v: 1.0 for v in variations}
+    shape_uncertainties = {v:1.0 for v in variations}
     cat = Category(
         name=histname,
         processes=list(combined_all_processes),
@@ -767,6 +767,24 @@ def calculate_LHEPdf_norm(histos, era, proc):
     if(np.sum(h_nom)!=0.0): var = var/np.sum(h_nom)
     return var
 
+def calculate_LHEscale_norm(histos, era):
+        h_lhe =[]
+        h_nom_up = copy.deepcopy(histos["nominal"])
+        h_nom_down = copy.deepcopy(histos["nominal"])
+        for i in range(9):
+            sname = 'LHEScaleWeight__{0}'.format(i)
+            h_lhe.append(histos[sname])
+        for k in range(len(h_lhe[0].contents)):
+            for i in range(9):
+                if(h_lhe[i].contents[k]>h_nom_up.contents[k]):
+                    h_nom_up.contents[k]=h_lhe[i].contents[k]
+                if(h_lhe[i].contents[k]<h_nom_down.contents[k]):
+                    h_nom_down.contents[k]=h_lhe[i].contents[k]
+        var = (np.sum(h_nom_up.contents) - np.sum(histos["nominal"].contents))**2 + (np.sum(h_nom_down.contents) - np.sum(histos["nominal"].contents))**2 
+        var = np.sqrt(var/2.0)
+        if(np.sum(histos["nominal"].contents)!=0.0): var = var/np.sum(histos["nominal"].contents)
+        return var
+
 def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     dcof = open(ofname, "w")
     
@@ -848,11 +866,8 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     #print out shape uncertainties
     for syst in all_shape_uncerts:
         if('LHEScale' in syst): continue
-        if('jer' in syst):
-            if len(syst) != len('jer'):
-                dcof.write(syst + "\t shapeU \t")
-            else:
-                dcof.write(syst + "\t shape \t")
+        if('jer' in syst and (len(syst) != len('jer'))):
+            dcof.write(syst + "\t shapeU \t")
         else : 
             dcof.write(syst + "\t shape \t")
         for cat in categories:
@@ -861,7 +876,10 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
                     continue
                 elif (proc in cat.shape_uncertainties.keys() and
                     syst in cat.shape_uncertainties[proc].keys()):
-                    dcof.write(str(cat.shape_uncertainties[proc][syst]))
+                    if('jer' in syst and (len(syst) != len('jer'))):
+                        dcof.write(str(10.0))
+                    else:
+                        dcof.write(str(cat.shape_uncertainties[proc][syst]))
                 else:
                     dcof.write("-")
                 dcof.write("\t")
@@ -909,7 +927,7 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
                     dcof.write("-")
                 dcof.write("\t")
         dcof.write("\n")
-    # print out LHE PDf inclusive xs scale uncert
+    # print out LHE PDf norm uncert
     dcof.write("LHEPdfWeight_norm" + "\t lnN \t")
     for cat in categories:
         for proc in cat.processes:
@@ -932,8 +950,36 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
             dcof.write("\t")
         dcof.write("\n")
 
-
+    # print out LHE Scale norm uncert
+    if 'z_peak'in  cat.full_name:
+        dcof.write("DYLHEScaleWeightZ_norm" + "\t lnN \t")
+    else:
+        dcof.write("DYLHEScaleWeight_norm" + "\t lnN \t")
     
+    for cat in categories:
+        for proc in cat.processes:
+            if "dy" in proc:
+                QCD_norm = calculate_LHEscale_norm(dict_procs[proc], era)
+                dcof.write("{0:.2f}".format(1.0 + QCD_norm))
+            else:
+                dcof.write("-")
+            dcof.write("\t")
+        dcof.write("\n")
+    
+    if 'z_peak'in  cat.full_name:
+        dcof.write("EWKLHEScaleWeightZ_norm" + "\t lnN \t")
+    else:
+        dcof.write("EWKLHEScaleWeight_norm" + "\t lnN \t")
+
+    for cat in categories:
+        for proc in cat.processes:
+            if "ewk" in proc:
+                QCD_norm = calculate_LHEscale_norm(dict_procs[proc], era)
+                dcof.write("{0:.2f}".format(1.0 + QCD_norm))
+            else:
+                dcof.write("-")
+            dcof.write("\t")
+        dcof.write("\n")
     #create nuisance groups for easy manipulation and freezing
     nuisance_groups = {}
     for nuisance_group, nuisances in nuisance_groups.items():
