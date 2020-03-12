@@ -243,9 +243,10 @@ def plot_variations(args):
         h_pdf =[]
         h_pdf_up = copy.deepcopy(hnom)
         h_pdf_down = copy.deepcopy(hnom)
+        n_pdf =0
         for i in range(lhe_pdf_variations[str(datataking_year)]):
             sname = 'LHEPdfWeight__{0}'.format(i)
-            if sname in res[mc_samp]:
+            if sname in res[mc_samp].keys():
                 h_pdf.append(res[mc_samp][sname]* weight_xs[mc_samp])
         for k in range(len(h_pdf[0].contents)):
             rms = 0.0
@@ -505,9 +506,10 @@ def create_variated_histos(weight_xs, proc,
         h_pdf_nom = copy.deepcopy(hbase)
         if "dy" in proc or "ewk" in proc or "ggh" in proc or "vbf" in proc or "zh_125" in proc or "wmh_125" in proc or "wph_125" in proc or "tth" in proc:
             h_nom = np.zeros_like(hbase.contents)
+            n_pdf =0
             for i in range(lhe_pdf_variations[str(era)]):
                 sname = 'LHEPdfWeight__{0}'.format(i)
-                if sname in hdict:
+                if sname in hdict.keys():
                     h_pdf.append(hdict[sname])
             for i in range(len(h_pdf)):
                 h_nom = h_nom + h_pdf[i].contents 
@@ -749,9 +751,10 @@ class Category:
 def calculate_LHEPdf_norm(histos, era, proc):
     #Based on https://arxiv.org/pdf/1510.03865.pdf
     h_pdf = []
+    n_pdf =0 
     for i in range(lhe_pdf_variations[str(era)]):
         sname = 'LHEPdfWeight__{0}'.format(i)
-        if sname in histos:
+        if sname in histos.keys():
             h_pdf.append(histos[sname])
     h_nom = np.zeros_like(histos["nominal"].contents)
     for i in range(len(h_pdf)):

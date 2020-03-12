@@ -99,9 +99,10 @@ def analyze_data(
         LHEScalew = data.structs["LHEScaleWeight"][0]
     
     LHEPdfw = None
+    nLHEPdfw = 0
     if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
         LHEPdfw = data.structs["LHEPdfWeight"][0]
-
+        nLHEPdfw = scalars["nLHEPdfWeight"][0]
     histo_bins = parameters["histo_bins"]
 
     #first mask of all events enabled
@@ -352,7 +353,7 @@ def analyze_data(
     #compute variated weights here to ensure the nominal weight contains all possible other weights  
     compute_event_weights(parameters, weights_individual, scalars,
         genweight_scalefactor, gghnnlopsw, ZpTw,
-        LHEScalew, LHEPdfw, analysis_corrections.pu_corrections, is_mc, dataset_era, dataset_name, use_cuda)
+        LHEScalew, LHEPdfw, nLHEPdfw, analysis_corrections.pu_corrections, is_mc, dataset_era, dataset_name, use_cuda)
 
     #actually multiply all the weights together with the appropriate up/down variations.
     #creates a 1-level dictionary with weights "nominal", "puweight__up", "puweight__down", ..." 
@@ -849,6 +850,7 @@ def finalize_weights(weights, dataset_era, all_weight_names=None):
                 ret["{0}__{1}".format(this_syst, sdir)] = wtot
 
         elif this_syst == "LHEPdfWeight":
+
             for sdir in range(len(weights[this_syst])): 
                 wval_this_systematic = weights[this_syst][str(sdir)]
                 wtot = NUMPY_LIB.copy(ret["nominal"])
@@ -884,7 +886,7 @@ def finalize_weights(weights, dataset_era, all_weight_names=None):
             print("finalized weight", k, ret[k].mean())
     return ret
 
-def compute_event_weights(parameters, weights, scalars, genweight_scalefactor, gghw, zptw, LHEScalew, LHEPdfw, pu_corrections, is_mc, dataset_era, dataset_name, use_cuda):
+def compute_event_weights(parameters, weights, scalars, genweight_scalefactor, gghw, zptw, LHEScalew, LHEPdfw, nLHEPdfw, pu_corrections, is_mc, dataset_era, dataset_name, use_cuda):
     if is_mc:
         if dataset_name in parameters["ggh_nnlops_reweight"]:
             weights["nominal"]["nominal"] = scalars["genWeight"] * genweight_scalefactor * gghw
@@ -2336,7 +2338,8 @@ def deltaphi_cudakernel(phi1, phi2, out_dphi):
 def get_theoryweights_cpu(offsets, variations, index, out_var):
     #loop over events
     for iev in numba.prange(len(offsets) - 1):
-        out_var[iev] = variations[offsets[iev]+index]
+        if(offsets[iev]+index < len(variations)):
+            out_var[iev] = variations[offsets[iev]+index]
 
 @cuda.jit
 def get_theoryweights_cuda(offsets, variations, index, out_var):
@@ -3392,7 +3395,11 @@ def create_datastructure(dataset_name, is_mc, dataset_era, do_fsr=False):
         datastructures["EventVariables"] += [
             ("Pileup_nTrueInt", "uint32"),
             ("Generator_weight", "float32"),
-            ("genWeight", "float32")
+            ("genWeight", "float32"),
+            ]
+        if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
+            datastructures["EventVariables"] += [
+                ("nLHEPdfWeight", "uint32")
         ]
         if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
             datastructures["EventVariables"] += [
@@ -3424,7 +3431,9 @@ def create_datastructure(dataset_name, is_mc, dataset_era, do_fsr=False):
         if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
             datastructures["LHEPdfWeight"] = [
                 ("LHEPdfWeight", "float32"),
+                
             ]
+            
         if "dy" in dataset_name or "ewk" in dataset_name:
             
             datastructures["LHEScaleWeight"] = [
