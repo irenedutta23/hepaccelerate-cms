@@ -494,7 +494,7 @@ def analyze_data(
                 print("jet analysis syst={0} sdir={1} mean_pt_change={2:.4f} num_passing_jets={3} ".format(
                     jet_syst_name[0], jet_syst_name[1], float(jet_pt_change), int(ret_jet["selected_jets"].sum()))
                 )
-                fill_histograms_several(
+            fill_histograms_several(
                 hists, "nominal", "hist__dimuon__",
                 [
                     (ret_jet["num_jets"], "num_jets" , histo_bins["numjets"]),
