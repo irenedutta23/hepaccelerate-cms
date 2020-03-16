@@ -416,7 +416,7 @@ def analyze_data(
     if is_mc:
         syst_to_consider += ["Total"]
         if parameters["do_jer"][dataset_era]: 
-            if dataset_era ==2018:
+            if dataset_era == '2018':
                 syst_to_consider += ["jer"]
             else:
                 jer_syst = ["jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2"]
@@ -430,7 +430,7 @@ def analyze_data(
     #Now actually call the JEC computation for each scenario
     jet_pt_startfrom = "pt_jec"
     if is_mc and parameters["do_jer"][dataset_era]:
-        if dataset_era ==2018 :
+        if dataset_era == '2018' :
             jet_pt_startfrom = "pt_jec_jer" #apply nominal jer smearing only to 2018
         else:
             jet_pt_startfrom = "pt_jec_jer_ms" #apply (jer+no_jer)/2 to 2016/17
@@ -452,10 +452,10 @@ def analyze_data(
                 jet_syst_name = (uncertainty_name , jet_syst_name[1]) #For correctly dealing with the histogram names for 2016/17
             # Configure the jet pt vector to the variated one
             # Would need to also do the mass here
-            if((dataset_era== 2018 or 'jer' not in uncertainty_name) and is_mc): 
+            if((dataset_era== '2018' or 'jer' not in uncertainty_name) and is_mc): 
                 jets_passing_id.pt = jet_pt_vec
-            elif(dataset_era!= 2018 and is_mc and "jer" in  uncertainty_name): #for correct treatment of 2016/17 up/down syst for jer bins
-                
+            elif(dataset_era!= '2018' and is_mc and "jer" in  uncertainty_name): #for correct treatment of 2016/17 up/down syst for jer bins
+                print(dataset_era)
                 ret_jet_temp = get_selected_jets(
                     scalars,
                     jets_passing_id,
@@ -473,7 +473,6 @@ def analyze_data(
                 j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
                 pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"]))
                 is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
-                
                 for k in range(0,len(is_jer_event)):
                     if(is_jer_event[k]):
                         for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
@@ -481,7 +480,6 @@ def analyze_data(
                                 jets_passing_id.pt[jc] = jet_systematics.pt_jec_jer[jc] #nominal jer smearing is now up for 2016/17
                             elif(jet_syst_name[1] == 'down') : 
                                 jets_passing_id.pt[jc] = jet_systematics.pt_jec[jc] #no smearing is now down for 2016/17
-                    
             #Do the pt-dependent jet analysis now for all jets
             ret_jet = get_selected_jets(
                 scalars,
@@ -496,7 +494,7 @@ def analyze_data(
                 print("jet analysis syst={0} sdir={1} mean_pt_change={2:.4f} num_passing_jets={3} ".format(
                     jet_syst_name[0], jet_syst_name[1], float(jet_pt_change), int(ret_jet["selected_jets"].sum()))
                 )
-            fill_histograms_several(
+                fill_histograms_several(
                 hists, "nominal", "hist__dimuon__",
                 [
                     (ret_jet["num_jets"], "num_jets" , histo_bins["numjets"]),
@@ -2400,7 +2398,7 @@ def get_genpt_cpu(reco_offsets, reco_genPartIdx, genparts_offsets, genparts_pt, 
         for imu in range(reco_offsets[iev], reco_offsets[iev + 1]):
             #get index of genparticle that reco particle was matched to
             idx_gp = reco_genPartIdx[imu]
-            if idx_gp >= 0:
+            if idx_gp >= 0 and len(genparts_pt) > (genparts_offsets[iev] + idx_gp):
                 genpt = genparts_pt[genparts_offsets[iev] + idx_gp]
                 out_reco_genpt[imu] = genpt
 
