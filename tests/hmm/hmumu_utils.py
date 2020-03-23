@@ -455,7 +455,6 @@ def analyze_data(
             if((dataset_era== '2018' or 'jer' not in uncertainty_name) and is_mc): 
                 jets_passing_id.pt = jet_pt_vec
             elif(dataset_era!= '2018' and is_mc and "jer" in  uncertainty_name): #for correct treatment of 2016/17 up/down syst for jer bins
-                print(dataset_era)
                 ret_jet_temp = get_selected_jets(
                     scalars,
                     jets_passing_id,
