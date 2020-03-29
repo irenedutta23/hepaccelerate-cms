@@ -96,13 +96,25 @@ datasets:
   files_merged: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/*d01282*/*/*/*.root
   is_mc: true
-  name: dy_m105_160_amc
+  name: dy_m105_160_amc_01j
+  skim_cut: "(HLT_IsoMu27) && nMuon>=2"
+- era: "2017"
+  files_merged: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/*d01282*/*/*/*.root
+  is_mc: true
+  name: dy_m105_160_amc_2j
   skim_cut: "(HLT_IsoMu27) && nMuon>=2"
 - era: "2017"
   files_merged: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCP5*13TeV-amcatnloFXFX-pythia8/*d01282*/*/*/*.root
   is_mc: true
-  name: dy_m105_160_vbf_amc
+  name: dy_m105_160_vbf_amc_01j
+  skim_cut: "(HLT_IsoMu27) && nMuon>=2"
+- era: "2017"
+  files_merged: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIIFall17NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCP5*13TeV-amcatnloFXFX-pythia8/*d01282*/*/*/*.root
+  is_mc: true
+  name: dy_m105_160_vbf_amc_2j
   skim_cut: "(HLT_IsoMu27) && nMuon>=2"
 - era: "2017"
   files_merged: /store/mc/RunIIFall17NanoAODv6v1/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/merged_*.root
@@ -402,13 +414,25 @@ datasets:
   files_merged: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/*/*/*/*.root
   is_mc: true
-  name: dy_m105_160_amc
+  name: dy_m105_160_amc_01j
+  skim_cut: "(HLT_IsoMu24 || HLT_IsoTkMu24) && nMuon>=2"
+- era: "2016"
+  files_merged: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/*/*/*/*.root
+  is_mc: true
+  name: dy_m105_160_amc_2j
   skim_cut: "(HLT_IsoMu24 || HLT_IsoTkMu24) && nMuon>=2"
 - era: "2016"
   files_merged: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/*/*/*/*.root
   is_mc: true
-  name: dy_m105_160_vbf_amc
+  name: dy_m105_160_vbf_amc_01j
+  skim_cut: "(HLT_IsoMu24 || HLT_IsoTkMu24) && nMuon>=2"
+- era: "2016"
+  files_merged: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIISummer16NanoAODv6v2/DYJetsToLL_M-105To160_VBFFilter_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/*/*/*/*.root
+  is_mc: true
+  name: dy_m105_160_vbf_amc_2j
   skim_cut: "(HLT_IsoMu24 || HLT_IsoTkMu24) && nMuon>=2"
 - era: "2016"
   files_merged: /store/mc/RunIISummer16NanoAODv6/TTTo2L2Nu_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/merged_*.root
@@ -666,13 +690,25 @@ datasets:
   files_merged: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/Nano25Oct2019*/*/*.root
   is_mc: true
-  name: dy_m105_160_amc
+  name: dy_m105_160_amc_01j
+  skim_cut: "HLT_IsoMu24 && nMuon>=2"
+- era: "2018"
+  files_merged: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/Nano25Oct2019*/*/*.root
+  is_mc: true
+  name: dy_m105_160_amc_2j
   skim_cut: "HLT_IsoMu24 && nMuon>=2"
 - era: "2018"
   files_merged: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
   files_nano_in: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/Nano25Oct2019*/*/*.root
   is_mc: true
-  name: dy_m105_160_vbf_amc
+  name: dy_m105_160_vbf_amc_01j
+  skim_cut: "HLT_IsoMu24 && nMuon>=2"
+- era: "2018"
+  files_merged: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/merged_*.root
+  files_nano_in: /store/mc/RunIIAutumn18NanoAODv6/DYJetsToLL_M-105To160_VBFFilter_TuneCP5_PSweights_13TeV-amcatnloFXFX-pythia8/NANOAODSIM/Nano25Oct2019*/*/*.root
+  is_mc: true
+  name: dy_m105_160_vbf_amc_2j
   skim_cut: "HLT_IsoMu24 && nMuon>=2"
 - era: "2018"
   files_merged: /store/mc/RunIIAutumn18NanoAODv6/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/merged_*.root

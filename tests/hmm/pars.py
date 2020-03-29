@@ -62,7 +62,8 @@ categories = {
             "st_tw_top",
             "st_tw_antitop",
             "ttjets_sl", "ttjets_dl",
-            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
+            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
             "www","wwz","wzz","zzz",
         ],
     },
@@ -85,7 +86,8 @@ categories = {
             "st_tw_top",
             "st_tw_antitop",
             "ttjets_sl", "ttjets_dl",
-            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
+            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
             "www","wwz","wzz","zzz",
         ],
     }
@@ -148,7 +150,8 @@ combined_categories = {
             #"st_t_antitop",
             "stop",
             "tt",
-            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
+            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
             "vvv",
         ],
     },
@@ -167,7 +170,8 @@ combined_categories = {
             #"st_t_antitop",
             "stop",
             "tt",
-            "dy_m105_160_amc", "dy_m105_160_vbf_amc",
+            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
+            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
             "vvv",
         ],
     }
@@ -192,7 +196,7 @@ process_groups = [
     ("ewk", ["ewk_lljj_mll50_mjj120_herwig", "ewk_lljj_mll105_160_ptJ_herwig"]),
     ("stop", ["st_tw_top", "st_tw_antitop"]),
     ("tt", ["ttjets_sl", "ttjets_dl",]),
-    ("dy", ["dy_0j", "dy_1j", "dy_2j", "dy_m105_160_amc", "dy_m105_160_vbf_amc", "dy"]),
+    ("dy", ["dy_0j", "dy_1j", "dy_2j", "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j", "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j", "dy"]),
 ]
 
 extra_plot_kwargs = {
@@ -296,8 +300,10 @@ cross_sections = {
     "dy_2j": 338.26,
     "dy_m105_160_mg": 46.9479, #Pisa 47.17
     "dy_m105_160_amc": 46.9479, # https://docs.google.com/document/d/1bViX80nXQ_p-W4gI6Fqt9PNQ49B6cP1_FhcKwTZVujo/edit?usp=sharing
-    "dy_m105_160_vbf_mg": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, #Using Pisa for sync, caltech group xs 46.9479*0.0425242
-    "dy_m105_160_vbf_amc": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, 
+    "dy_m105_160_vbf_mg_01j": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, #Using Pisa for sync, caltech group xs 46.9479*0.0425242
+    "dy_m105_160_vbf_amc_2j": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, 
+    "dy_m105_160_vbf_mg_01j": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, #Using Pisa for sync, caltech group xs 46.9479*0.0425242
+    "dy_m105_160_vbf_amc_2j": {"2016": 1.77, "2017": 2.04, "2018": 2.03}, 
     "ggh_powheg_pythia_125": 0.010571, #48.61 * 0.0002176; https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNHLHE2019
     "ggh_amcPS_pythia_125": 0.010571,
     "ggh_powhegPS_pythia_125": 0.010571,
@@ -406,7 +412,6 @@ jec_unc = ['Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', '
 
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-
 shape_systematics = jec_unc + ["jer", "jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl","LHEPdfWeight","EWZ105160PS"]
 common_scale_uncertainties = {
     "lumi": 1.025,
@@ -574,6 +579,7 @@ analysis_parameters = {
             "jerF1": {"eta" : [3.1,10.0], "pt" : 0.0},
             "jerF2": {"eta" : [3.1,10.0], "pt" : 50.0},
         },
+        "split_z_peak":{"2016": False, "2017": False, "2018": False},
         "jec_tag": {"2016": "Summer16_07Aug2017_V11", "2017": "Fall17_17Nov2017_V32", "2018": "Autumn18_V19"}, 
         "jet_mu_dr": 0.4,
         "jet_pt_leading": {"2016": 35.0, "2017": 35.0, "2018": 35.0},
@@ -602,7 +608,12 @@ analysis_parameters = {
         "masswindow_z_peak": [76, 106],
         "masswindow_h_sideband": [110, 150],
         "masswindow_h_peak": [115, 135],
-
+        "masswindow_z_peak_jerB1": [76, 106],
+        "masswindow_z_peak_jerB2": [76, 106],
+        "masswindow_z_peak_jerEC1": [76, 106],
+        "masswindow_z_peak_jerEC2": [76, 106],
+        "masswindow_z_peak_jerF1": [76, 106],
+        "masswindow_z_peak_jerF2": [76, 106],
         "inv_mass_bins": 41,
 
         "extra_electrons_pt": 20,
@@ -718,7 +729,7 @@ histo_bins = {
 for hname, bins in analysis_parameters["baseline"]["dnn_input_histogram_bins"].items():
     histo_bins[hname] = np.linspace(bins[0], bins[1], bins[2], dtype=np.float32)
 
-for masswindow in ["z_peak", "h_peak", "h_sideband"]:
+for masswindow in ["z_peak", "h_peak", "h_sideband","z_peak_jerB1","z_peak_jerB2","z_peak_jerEC1","z_peak_jerEC2","z_peak_jerF1","z_peak_jerF2"]:
     mw = analysis_parameters["baseline"]["masswindow_" + masswindow]
     histo_bins["inv_mass_{0}".format(masswindow)] = np.linspace(mw[0], mw[1], 41, dtype=np.float32)
 
@@ -726,6 +737,12 @@ histo_bins["dnn_pred2"] = {
     "h_peak": np.array([0., 0.905, 0.915, 0.925, 0.935, 0.94, 0.945, 0.95, 0.955, 0.96, 0.965,0.97, 0.975,0.98, 0.985,1.0], dtype=np.float32),
     "z_peak": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
     "h_sideband": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerB1": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerB2": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerEC1": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerEC2": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerF1": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
+    "z_peak_jerF2": np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=np.float32),
 }
 
 

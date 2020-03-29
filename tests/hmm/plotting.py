@@ -869,20 +869,14 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     #print out shape uncertainties
     for syst in all_shape_uncerts:
         if('LHEScale' in syst): continue
-        if('jer' in syst and (len(syst) != len('jer'))):
-            dcof.write(syst + "\t shapeU \t")
-        else : 
-            dcof.write(syst + "\t shape \t")
+        dcof.write(syst + "\t shape \t")
         for cat in categories:
             for proc in cat.processes:
                 if proc in remove_proc:
                     continue
                 elif (proc in cat.shape_uncertainties.keys() and
                     syst in cat.shape_uncertainties[proc].keys()):
-                    if('jer' in syst and (len(syst) != len('jer'))):
-                        dcof.write(str(10.0))
-                    else:
-                        dcof.write(str(cat.shape_uncertainties[proc][syst]))
+                    dcof.write(str(cat.shape_uncertainties[proc][syst]))
                 else:
                     dcof.write("-")
                 dcof.write("\t")
@@ -1001,8 +995,10 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
         dcof.write("RZ rateParam {0} dy_2j 1 \n".format(cat.full_name)) 
         #dcof.write("REWZ rateParam {0} ewk_lljj_mll50_mjj120 1 \n".format(cat.full_name))
     elif ("h_peak" in cat.full_name) or ("h_sideband" in cat.full_name):
-        dcof.write("R rateParam {0} dy_m105_160_amc 1 \n".format(cat.full_name))           
-        dcof.write("R rateParam {0} dy_m105_160_vbf_amc 1 \n".format(cat.full_name))
+        dcof.write("R_01j rateParam {0} dy_m105_160_amc_01j 1 \n".format(cat.full_name))           
+        dcof.write("R_01j rateParam {0} dy_m105_160_vbf_amc_01j 1 \n".format(cat.full_name))
+        dcof.write("R_2j rateParam {0} dy_m105_160_amc_2j 1 \n".format(cat.full_name))
+        dcof.write("R_2j rateParam {0} dy_m105_160_vbf_amc_2j 1 \n".format(cat.full_name))
         #dcof.write("REWZ rateParam {0} ewk_lljj_mll105_160 1 \n".format(cat.full_name))
     dcof.write("{0} autoMCStats 0 0 1 \n".format(cat.full_name))
     dcof.write("\n")
@@ -1074,7 +1070,6 @@ if __name__ == "__main__":
                 os.makedirs(outdir_datacards)
             except FileExistsError as e:
                 pass
-
             #in inverse picobarns
             int_lumi = res["data"]["int_lumi"]
             for mc_samp in res.keys():
@@ -1097,9 +1092,10 @@ if __name__ == "__main__":
                 print("Use commandline option --histnames hist__dimuon__leading_muon_pt --histnames hist__dimuon__subleading_muon_pt ... to change that")
             else:
                 histnames = cmdline_args.histnames
-            print("Processing histnames", histnames)
+            #print("Processing histnames", histnames)
             
             for var in histnames:
+                if("z_peak_jer" in var): print("wow ", var)
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen", "hist__dnn_presel__dnn_pred"]:
                     print("Skipping {0}".format(var))
                     continue
