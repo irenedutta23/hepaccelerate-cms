@@ -382,7 +382,7 @@ def analyze_data(
         ret_jet_tp = get_selected_jets(
             scalars,
             jets_passing_id,
-            ret_mu["selected_events"],#mask_events,
+            evt_mask,
             parameters["jet_pt_subleading"][dataset_era],
             parameters["jet_btag_medium"][dataset_era],
             parameters["jet_btag_loose"][dataset_era],
