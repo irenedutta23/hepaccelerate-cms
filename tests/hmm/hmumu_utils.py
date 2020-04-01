@@ -382,7 +382,7 @@ def analyze_data(
         ret_jet_tp = get_selected_jets(
             scalars,
             jets_passing_id,
-            mask_events,
+            ret_mu["selected_events"],#mask_events,
             parameters["jet_pt_subleading"][dataset_era],
             parameters["jet_btag_medium"][dataset_era],
             parameters["jet_btag_loose"][dataset_era],
@@ -409,7 +409,6 @@ def analyze_data(
             evt_mask = NUMPY_LIB.logical_and(ret_mu["selected_events"],dy2j_mask)
         else:
             evt_mask = NUMPY_LIB.logical_and(ret_mu["selected_events"],NUMPY_LIB.invert(dy2j_mask))
-        
     fill_histograms_several(
         hists, "nominal", "hist__dimuon__",
         [
@@ -481,16 +480,16 @@ def analyze_data(
             if(('jer' not in uncertainty_name) and is_mc): 
                 jets_passing_id.pt = jet_pt_vec
             elif(is_mc and "jer" in  uncertainty_name): #for correct treatment of up/down syst for jer bins
-                jets_passing_id.pt = jet_systematics.pt_jec
-                if (jet_syst_name[1] == 'down') :
-                    jet_pt_change = (jet_systematics.pt_jec - jets_passing_id.pt).mean()
-                    jets_passing_id.pt = jet_systematics.pt_jec
-                else:
+                nom_vec= jet_systematics.get_variated_pts('nominal', startfrom='pt_jec')
+                for js_n, new_pt_vec in nom_vec.items():
+                    jets_passing_id.pt = new_pt_vec #down smearing is same as nominal
+                jet_pt_diff = NUMPY_LIB.zeros_like(jets_passing_id.pt)
+                if (jet_syst_name[1] == 'up') :
                     jet_pt_diff = NUMPY_LIB.zeros_like(jets_passing_id.pt)
                     ret_jet_temp = get_selected_jets(
                         scalars,
                         jets_passing_id,
-                        mask_events,
+                        evt_mask,#mask_events,
                         parameters["jet_pt_subleading"][dataset_era],
                         parameters["jet_btag_medium"][dataset_era],
                         parameters["jet_btag_loose"][dataset_era],
@@ -502,21 +501,20 @@ def analyze_data(
                         attributes=j_attrs)
                     
                     j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
-                    pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"]))
+                    pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
                     is_jer_event = NUMPY_LIB.logical_and(evt_mask,pass_jer_bin)
-                   
                     for k in range(0,len(is_jer_event)):
                         if(is_jer_event[k]):
                             for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
                                 jet_pt_diff[jc] = jet_systematics.pt_jec_jer[jc] - jets_passing_id.pt[jc]
                                 jets_passing_id.pt[jc] = jet_systematics.pt_jec_jer[jc] #nominal jer smearing is now up 
-
-                    jet_pt_chane = jet_pt_diff.mean()
+                jet_pt_change = jet_pt_diff.mean()
+                    
             #Do the pt-dependent jet analysis now for all jets
             ret_jet = get_selected_jets(
                 scalars,
                 jets_passing_id,
-                mask_events,
+                evt_mask,#mask_events,
                 parameters["jet_pt_subleading"][dataset_era],
                 parameters["jet_btag_medium"][dataset_era],
                 parameters["jet_btag_loose"][dataset_era],
