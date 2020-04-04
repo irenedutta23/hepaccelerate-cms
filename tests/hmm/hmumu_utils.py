@@ -395,20 +395,28 @@ def analyze_data(
             {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
             genJet.masks["all"], 0.4))
         
-        
-        jet_attrs = ["pt", "eta", "phi", "mass", "qgl","jetId","puId","btagDeepB","hadronFlavour"]
-        tp_leading_jet = jets_passing_id.select_nth(
-            0, ret_mu["selected_events"], jets_matched_to_genJet,
-            attributes=jet_attrs)
-        tp_subleading_jet = jets_passing_id.select_nth(
-            1, ret_mu["selected_events"], jets_matched_to_genJet,
-            attributes=jet_attrs)
-        dy2j_mask = NUMPY_LIB.logical_and(tp_subleading_jet['pt'] > 0., tp_leading_jet['pt'] > 0.)
-        
+        jets_vbf_filter = NUMPY_LIB.zeros_like(jets_passing_id.pt)
+        for k in range(0,len(evt_mask)):
+            if(evt_mask[k] and ret_jet_tp["num_jets"][k]>1):
+                found_j0=0.
+                for jc in range(jets_passing_id.offsets[k],jets_passing_id.offsets[k+1]):
+                    if(ret_jet_tp["selected_jets"][jc] and jets_passing_id.pt[jc]>parameters["jet_pt_leading"][dataset_era]):
+                        jets_vbf_filter[jc]= 1.
+                        found_j0=jc
+                        break
+                if(found_j0>0.):
+                    for jcs in range(found_j0+1,jets_passing_id.offsets[k+1]):
+                        if(ret_jet_tp["selected_jets"][jcs]):
+                            jets_vbf_filter[jcs]= 1.
+                            break
+                    
+        dy2j_mask = NUMPY_LIB.logical_and(jets_vbf_filter,jets_matched_to_genJet)
+        num_good_matches = ha.sum_in_offsets(jets_passing_id.offsets,dy2j_mask , evt_mask, dy2j_mask, NUMPY_LIB.int8)
         if '_2j' in dataset_name:
-            evt_mask = NUMPY_LIB.logical_and(ret_mu["selected_events"],dy2j_mask)
+            evt_mask = num_good_matches == 2
         else:
-            evt_mask = NUMPY_LIB.logical_and(ret_mu["selected_events"],NUMPY_LIB.invert(dy2j_mask))
+            evt_mask = num_good_matches != 2
+        
     fill_histograms_several(
         hists, "nominal", "hist__dimuon__",
         [
@@ -424,7 +432,6 @@ def analyze_data(
         use_cuda
     )
     ret["selected_events_dimuon"] = NUMPY_LIB.sum(evt_mask)#ret_mu["selected_events"])
- 
     masswindow_z_peak = ((higgs_inv_mass >= parameters["masswindow_z_peak"][0]) & (higgs_inv_mass < parameters["masswindow_z_peak"][1]))
     masswindow_h_region = ((higgs_inv_mass >= parameters["masswindow_h_sideband"][0]) & (higgs_inv_mass < parameters["masswindow_h_sideband"][1]))
     masswindow_h_peak = ((higgs_inv_mass >= parameters["masswindow_h_peak"][0]) & (higgs_inv_mass < parameters["masswindow_h_peak"][1]))
