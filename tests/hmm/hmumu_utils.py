@@ -567,6 +567,8 @@ def analyze_data(
                 (ret_mu['selected_events']) & (ret_jet["num_jets"] >= 2) &
                 (leading_jet["pt"] > parameters["jet_pt_leading"][dataset_era])
             )
+            print(dnn_presel.sum())
+            '''
             if is_mc and 'dy_m105_160' in dataset_name:
                 leading_jet_offset = NUMPY_LIB.arange(0,len(leading_jet["pt"])+1)
                 leading_jets_matched_to_genJet = NUMPY_LIB.invert(ha.mask_deltar_first(
@@ -582,9 +584,11 @@ def analyze_data(
                 jets_vbf_filter = NUMPY_LIB.logical_and(leading_jets_matched_to_genJet,subleading_jets_matched_to_genJet)
                 if '_2j' in dataset_name:
                     dnn_presel = NUMPY_LIB.logical_and(dnn_presel,jets_vbf_filter)
+                    print("2j",dnn_presel.sum())
                 else:
                     dnn_presel = NUMPY_LIB.logical_and(dnn_presel,NUMPY_LIB.invert(jets_vbf_filter))
-                    
+                    print("01j",dnn_presel.sum())
+            '''
             #Histograms after dnn preselection
             fill_histograms_several(
                 hists, jet_syst_name, "hist__dnn_presel__",
@@ -721,7 +725,9 @@ def analyze_data(
 
                 for icat in [5, ]:
                     msk_cat = (category == icat)
-                    
+                    print("Cat",msk_cat.sum())
+                    print(mass_edges, massbin_msk.sum())
+                    print((dnn_presel & massbin_msk & msk_cat).sum())
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
