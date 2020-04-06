@@ -377,45 +377,6 @@ def analyze_data(
         }
     '''
 
-    evt_mask = ret_mu["selected_events"]
-    if is_mc and 'dy_m105_160' in dataset_name :
-        ret_jet_tp = get_selected_jets(
-            scalars,
-            jets_passing_id,
-            evt_mask,
-            parameters["jet_pt_subleading"][dataset_era],
-            parameters["jet_btag_medium"][dataset_era],
-            parameters["jet_btag_loose"][dataset_era],
-            is_mc, use_cuda
-        )
-        
-        jets_matched_to_genJet = NUMPY_LIB.invert(ha.mask_deltar_first(
-            {"eta": jets_passing_id.eta, "phi": jets_passing_id.phi, "offsets": jets_passing_id.offsets},
-            ret_jet_tp["selected_jets"],
-            {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
-            genJet.masks["all"], 0.4))
-        
-        jets_vbf_filter = NUMPY_LIB.zeros_like(jets_passing_id.pt)
-        for k in range(0,len(evt_mask)):
-            if(evt_mask[k] and ret_jet_tp["num_jets"][k]>1):
-                found_j0=0.
-                for jc in range(jets_passing_id.offsets[k],jets_passing_id.offsets[k+1]):
-                    if(ret_jet_tp["selected_jets"][jc] and jets_passing_id.pt[jc]>parameters["jet_pt_leading"][dataset_era]):
-                        jets_vbf_filter[jc]= 1.
-                        found_j0=jc
-                        break
-                if(found_j0>0.):
-                    for jcs in range(found_j0+1,jets_passing_id.offsets[k+1]):
-                        if(ret_jet_tp["selected_jets"][jcs]):
-                            jets_vbf_filter[jcs]= 1.
-                            break
-                    
-        dy2j_mask = NUMPY_LIB.logical_and(jets_vbf_filter,jets_matched_to_genJet)
-        num_good_matches = ha.sum_in_offsets(jets_passing_id.offsets,dy2j_mask , evt_mask, dy2j_mask, NUMPY_LIB.int8)
-        if '_2j' in dataset_name:
-            evt_mask = num_good_matches == 2
-        else:
-            evt_mask = num_good_matches != 2
         
     fill_histograms_several(
         hists, "nominal", "hist__dimuon__",
@@ -427,23 +388,23 @@ def analyze_data(
             (higgs_inv_mass, "inv_mass", histo_bins["inv_mass"]),
             (scalars["PV_npvsGood"], "npvs", histo_bins["npvs"])
         ],
-        evt_mask, #ret_mu["selected_events"],
+        ret_mu["selected_events"],
         weights_final,
         use_cuda
     )
-    ret["selected_events_dimuon"] = NUMPY_LIB.sum(evt_mask)#ret_mu["selected_events"])
+    ret["selected_events_dimuon"] = NUMPY_LIB.sum(ret_mu["selected_events"])
     masswindow_z_peak = ((higgs_inv_mass >= parameters["masswindow_z_peak"][0]) & (higgs_inv_mass < parameters["masswindow_z_peak"][1]))
     masswindow_h_region = ((higgs_inv_mass >= parameters["masswindow_h_sideband"][0]) & (higgs_inv_mass < parameters["masswindow_h_sideband"][1]))
     masswindow_h_peak = ((higgs_inv_mass >= parameters["masswindow_h_peak"][0]) & (higgs_inv_mass < parameters["masswindow_h_peak"][1]))
     masswindow_h_sideband = masswindow_h_region & NUMPY_LIB.invert(masswindow_h_peak)
     #masswindow_z_peak_jer = ((higgs_inv_mass >= parameters["masswindow_z_peak"][0]) & (higgs_inv_mass < parameters["masswindow_z_peak"][1]))
     #get the number of additional muons (not OS) that pass ID and iso cuts
-    n_additional_muons = ha.sum_in_offsets(muons.offsets, ret_mu["additional_muon_sel"], evt_mask, ret_mu["additional_muon_sel"], dtype=NUMPY_LIB.int8)
-    n_additional_electrons = ha.sum_in_offsets(electrons.offsets, ret_el["additional_electron_sel"], evt_mask, ret_el["additional_electron_sel"], dtype=NUMPY_LIB.int8)
+    n_additional_muons = ha.sum_in_offsets(muons.offsets, ret_mu["additional_muon_sel"], ret_mu["selected_events"], ret_mu["additional_muon_sel"], dtype=NUMPY_LIB.int8)
+    n_additional_electrons = ha.sum_in_offsets(electrons.offsets, ret_el["additional_electron_sel"], ret_mu["selected_events"], ret_el["additional_electron_sel"], dtype=NUMPY_LIB.int8)
 
     #This computes the JEC, JER and associated systematics
     if debug:
-        print("event selection eff based on 2 muons", evt_mask.sum() / float(len(mask_events)))
+        print("event selection eff based on 2 muons", ret_mu["selected_events"].sum() / float(len(mask_events)))
         print("Doing nominal jec on {0} jets".format(jets_passing_id.numobjects()))
         
     jet_systematics = JetTransformer(
@@ -496,7 +457,7 @@ def analyze_data(
                     ret_jet_temp = get_selected_jets(
                         scalars,
                         jets_passing_id,
-                        evt_mask,#mask_events,
+                        ret_mu['selected_events'],
                         parameters["jet_pt_subleading"][dataset_era],
                         parameters["jet_btag_medium"][dataset_era],
                         parameters["jet_btag_loose"][dataset_era],
@@ -504,12 +465,12 @@ def analyze_data(
                     )
                     j_attrs = ["pt", "eta", "phi"]
                     temp_subleading_jet = jets_passing_id.select_nth(
-                        1, evt_mask, ret_jet_temp["selected_jets"],
+                        1, ret_mu['selected_events'], ret_jet_temp["selected_jets"],
                         attributes=j_attrs)
                     
                     j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
                     pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
-                    is_jer_event = NUMPY_LIB.logical_and(evt_mask,pass_jer_bin)
+                    is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
                     for k in range(0,len(is_jer_event)):
                         if(is_jer_event[k]):
                             for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
@@ -521,7 +482,7 @@ def analyze_data(
             ret_jet = get_selected_jets(
                 scalars,
                 jets_passing_id,
-                evt_mask,#mask_events,
+                ret_mu['selected_events'],
                 parameters["jet_pt_subleading"][dataset_era],
                 parameters["jet_btag_medium"][dataset_era],
                 parameters["jet_btag_loose"][dataset_era],
@@ -536,7 +497,7 @@ def analyze_data(
                 [
                     (ret_jet["num_jets"], "num_jets" , histo_bins["numjets"]),
                 ],
-                evt_mask,
+                ret_mu['selected_events'],
                 weights_final,
                 use_cuda
             )
@@ -553,10 +514,10 @@ def analyze_data(
                 jet_attrs += ["hadronFlavour"]
 
             leading_jet = jets_passing_id.select_nth(
-                0, evt_mask, ret_jet["selected_jets"],
+                0, ret_mu['selected_events'], ret_jet["selected_jets"],
                 attributes=jet_attrs)
             subleading_jet = jets_passing_id.select_nth(
-                1, evt_mask, ret_jet["selected_jets"],
+                1, ret_mu['selected_events'], ret_jet["selected_jets"],
                 attributes=jet_attrs)
             #if do_sync and jet_syst_name[0] == "nominal":
                 #sync_printout(ret_mu, muons, scalars,
@@ -573,12 +534,12 @@ def analyze_data(
                 pass_jerEC1 = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"]["jerEC1"]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"]["jerEC1"]["eta"][1], subleading_jet["pt"] > parameters["jer_pt_eta_bins"]["jerEC1"]["pt"]))
                 pass_jerEC2 = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"]["jerEC2"]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"]["jerEC2"]["eta"][1], subleading_jet["pt"] > parameters["jer_pt_eta_bins"]["jerEC2"]["pt"]))
                 
-                is_jerB1_event = NUMPY_LIB.logical_and(evt_mask,pass_jerB1)
-                is_jerB2_event = NUMPY_LIB.logical_and(evt_mask,pass_jerB2)
-                is_jerF1_event = NUMPY_LIB.logical_and(evt_mask,pass_jerF1)
-                is_jerF2_event = NUMPY_LIB.logical_and(evt_mask,pass_jerF2)
-                is_jerEC1_event = NUMPY_LIB.logical_and(evt_mask,pass_jerEC1)
-                is_jerEC2_event = NUMPY_LIB.logical_and(evt_mask,pass_jerEC2)
+                is_jerB1_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerB1)
+                is_jerB2_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerB2)
+                is_jerF1_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerF1)
+                is_jerF2_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerF2)
+                is_jerEC1_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerEC1)
+                is_jerEC2_event = NUMPY_LIB.logical_and(ret_mu['selected_events'],pass_jerEC2)
 
                 masswindow_z_peak_jerB1 = (masswindow_z_peak) & (is_jerB1_event) #split Z into 6 regions by j2 pt and eta
                 masswindow_z_peak_jerB2 = (masswindow_z_peak) & (is_jerB2_event)
@@ -603,10 +564,27 @@ def analyze_data(
 
             #compute DNN input variables in 2 muon, >=2jet region
             dnn_presel = (
-                (evt_mask) & (ret_jet["num_jets"] >= 2) &
+                (ret_mu['selected_events']) & (ret_jet["num_jets"] >= 2) &
                 (leading_jet["pt"] > parameters["jet_pt_leading"][dataset_era])
             )
-
+            if is_mc and 'dy_m105_160' in dataset_name:
+                leading_jet_offset = NUMPY_LIB.arange(0,len(leading_jet["pt"])+1)
+                leading_jets_matched_to_genJet = NUMPY_LIB.invert(ha.mask_deltar_first(
+                    {"eta": leading_jet["eta"], "phi": leading_jet["phi"], "offsets": leading_jet_offset},
+                    dnn_presel,
+                    {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
+                    genJet.masks["all"], 0.4))
+                subleading_jets_matched_to_genJet = NUMPY_LIB.invert(ha.mask_deltar_first(
+                    {"eta": leading_jet["eta"], "phi": leading_jet["phi"], "offsets": leading_jet_offset},
+                    dnn_presel,
+                    {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
+                    genJet.masks["all"], 0.4))
+                jets_vbf_filter = NUMPY_LIB.logical_and(leading_jets_matched_to_genJet,subleading_jets_matched_to_genJet)
+                if '_2j' in dataset_name:
+                    dnn_presel = NUMPY_LIB.logical_and(dnn_presel,jets_vbf_filter)
+                else:
+                    dnn_presel = NUMPY_LIB.logical_and(dnn_presel,NUMPY_LIB.invert(jets_vbf_filter))
+                    
             #Histograms after dnn preselection
             fill_histograms_several(
                 hists, jet_syst_name, "hist__dnn_presel__",
@@ -640,7 +618,7 @@ def analyze_data(
                ret_jet["num_jets"],ret_jet["num_jets_btag_medium"], n_sel_softjet, n_sel_HTsoftjet, n_sel_HTsoftjet2, dataset_era, is_mc
             )
             weights_in_dnn_presel = apply_mask(weights_selected, dnn_presel)
-          
+            
             if parameters["do_bdt_ucsd"]: 
                 if not (analysis_corrections.bdt_ucsd is None):
                     bdt_pred = evaluate_bdt_ucsd(dnn_vars, analysis_corrections.bdt_ucsd)
@@ -664,7 +642,7 @@ def analyze_data(
             )
             scalars["category"] = category
 
-
+                    
             #Assign the final analysis discriminator based on category
             #scalars["final_discriminator"] = NUMPY_LIB.zeros_like(higgs_inv_mass)
             if not (dnn_prediction is None):
@@ -743,6 +721,7 @@ def analyze_data(
 
                 for icat in [5, ]:
                     msk_cat = (category == icat)
+                    
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
@@ -762,7 +741,6 @@ def analyze_data(
                         weights_selected,
                         use_cuda
                     )
-
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
