@@ -28,10 +28,10 @@ ha = None
 NUMPY_LIB = None
 
 #Use this to turn on debugging
-debug = False
-#debug = True
+#debug = False
+debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = []
+debug_event_ids = [ 540461 ,   541877 ,  1323125 ,  1413248  , 1950025  , 1950490 ,  2149410]
 
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
@@ -567,7 +567,7 @@ def analyze_data(
                 (ret_mu['selected_events']) & (ret_jet["num_jets"] >= 2) &
                 (leading_jet["pt"] > parameters["jet_pt_leading"][dataset_era])
             )
-            #print('===========================================')
+            print('===========================================')
             #print("before mask ", dnn_presel.sum(),weights_selected['nominal'][dnn_presel].sum())
             
             if is_mc and 'dy_m105_160' in dataset_name:
@@ -578,17 +578,38 @@ def analyze_data(
                     {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
                     genJet.masks["all"], 0.4))
                 subleading_jets_matched_to_genJet = NUMPY_LIB.invert(ha.mask_deltar_first(
-                    {"eta": leading_jet["eta"], "phi": leading_jet["phi"], "offsets": leading_jet_offset},
+                    {"eta": subleading_jet["eta"], "phi": subleading_jet["phi"], "offsets": leading_jet_offset},
                     dnn_presel,
                     {"eta": genJet.eta, "phi": genJet.phi, "offsets": genJet.offsets},
                     genJet.masks["all"], 0.4))
+                
+                if debug:
+                    for evtid in debug_event_ids:
+                        idx = np.where(scalars["event"] == evtid)[0][0]
+                        print("leading jets")
+                        for e in ["pt", "eta", "phi", "mass"]:
+                            print(e, leading_jet[e][idx])
+
+                        print("subleading jets")
+                        for e in ["pt", "eta", "phi", "mass"]:
+                            print(e, subleading_jet[e][idx])
+                        print("gen jets")
+
+                        jaggedstruct_print(genJet, idx,
+                               ["pt", "eta", "phi", "mass"])
+
+                        print(leading_jets_matched_to_genJet[idx],subleading_jets_matched_to_genJet[idx])
+                        
+                        print(ret_jet["num_jets"][idx], ret_jet["num_jets_btag_medium"][idx],ret_jet["num_jets_btag_loose"][idx],n_additional_muons[idx], n_additional_electrons[idx], ret_jet["dijet_inv_mass"][idx],NUMPY_LIB.abs(leading_jet["eta"][idx] - subleading_jet["eta"][idx]))
                 jets_vbf_filter = NUMPY_LIB.logical_and(leading_jets_matched_to_genJet,subleading_jets_matched_to_genJet)
                 if '_2j' in dataset_name:
                     dnn_presel = NUMPY_LIB.logical_and(dnn_presel,jets_vbf_filter)
-                    print("2j",dnn_presel.sum(), weights_selected['nominal'][dnn_presel].sum())
+                    #print("2j",dnn_presel.sum(), weights_selected['nominal'][dnn_presel].sum())
+                    #print("2j",scalars['event'][dnn_presel])
                 else:
                     dnn_presel = NUMPY_LIB.logical_and(dnn_presel,NUMPY_LIB.invert(jets_vbf_filter))
-                    print("01j",dnn_presel.sum(), weights_selected['nominal'][dnn_presel].sum())
+                    #print("01j",dnn_presel.sum(), weights_selected['nominal'][dnn_presel].sum())
+                    #print("01j",scalars['event'][dnn_presel])
             
             #Histograms after dnn preselection
             fill_histograms_several(
@@ -734,6 +755,7 @@ def analyze_data(
                     print(weights_in_dnn_presel['nominal'].sum())
                     print(apply_mask(weights_selected, dnn_presel)['nominal'][(dnn_presel & massbin_msk & msk_cat)[dnn_presel]].sum())
                     '''
+                    print("full mask evts ",scalars['event'][(dnn_presel  & massbin_msk & msk_cat &subleading_jets_matched_to_genJet)])
                     fill_histograms_several(
                         hists, jet_syst_name, "hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat),
                         [
@@ -767,7 +789,7 @@ def analyze_data(
                         weights_in_dnn_presel,
                         use_cuda
                     )
-                    #print((hists["hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat)+"dnnPisa_pred"]['nominal'].contents).sum())
+                    print((hists["hist__dimuon_invmass_{0}_cat{1}__".format(massbin_name, icat)+"dnnPisa_pred"]['nominal'].contents).sum())
          #end of isyst loop
     #end of uncertainty_name loop
 
