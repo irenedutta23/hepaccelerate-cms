@@ -184,13 +184,9 @@ def plot_variations(args):
         np.sqrt(hnom.contents_w2),
                    kwargs_step={"label": "nominal "+"({0:.3E})".format(np.sum(hnom.contents))},
     )
-    jer_names=['jerB1__down','jerB2__down','jerEC1__down','jerEC2__down','jerF1__down','jerF2__down']
     for sdir in ["__up", "__down"]:
         if (unc + sdir) in res[mc_samp]:
-            if (unc+sdir) not in jer_names:
-                hvar = res[mc_samp][unc + sdir]* weight_xs[mc_samp]
-            else:
-                hvar = res[mc_samp]["nominal"]* weight_xs[mc_samp]
+            hvar = res[mc_samp][unc + sdir]* weight_xs[mc_samp]
             plot_hist_step(ax, hvar.edges, hvar.contents,
                 np.sqrt(hvar.contents_w2),
                            kwargs_step={"label": sdir.replace("__", "") + " ({0:.3E})".format(np.sum(hvar.contents))},
@@ -435,7 +431,6 @@ def create_variated_histos(weight_xs, proc,
     hbase = hdict[baseline]
     ret = Results(OrderedDict())
     ret["nominal"] = hbase
-    jer_names=['jerB1__down','jerB2__down','jerEC1__down','jerEC2__down','jerF1__down','jerF2__down']
     for variation in variations:
         for vdir in ["up", "down"]:
             #print("create_variated_histos", variation, vdir)
@@ -445,7 +440,7 @@ def create_variated_histos(weight_xs, proc,
             elif sname.endswith("__down"):
                 sname2 = sname.replace("__down", "Down")
 
-            if ((sname not in hdict) or (sname in jer_names)):
+            if (sname not in hdict.keys()):
                 #print("systematic", sname, "not found, taking baseline") 
                 hret = hbase
             else:
@@ -1100,7 +1095,6 @@ if __name__ == "__main__":
             #print("Processing histnames", histnames)
             
             for var in histnames:
-                if("z_peak_jer" in var): print("wow ", var)
                 if var in ["hist_puweight", "hist__dijet_inv_mass_gen", "hist__dnn_presel__dnn_pred"]:
                     print("Skipping {0}".format(var))
                     continue
