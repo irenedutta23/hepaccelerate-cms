@@ -4,7 +4,7 @@ categories = {
     "dimuon": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -25,7 +25,7 @@ categories = {
     "z_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -46,7 +46,7 @@ categories = {
     "h_sideband": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -70,7 +70,7 @@ categories = {
     "h_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -99,12 +99,12 @@ proc_grps = [
         ("stop", ["st_tw_top", "st_tw_antitop"]),
         ("tt", ["ttjets_sl", "ttjets_dl",]),
     ]
-combined_signal_samples= ["ggh_amcPS_pythia_125", "vbf_amcPS_pythia_125", "vh_125", "tth_125"]
+combined_signal_samples= ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "vh_125", "tth_125"]
 combined_categories = {
     "dimuon": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -121,7 +121,7 @@ combined_categories = {
     "z_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -138,7 +138,7 @@ combined_categories = {
     "h_sideband": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -158,7 +158,7 @@ combined_categories = {
     "h_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_amcPS_pythia_125",
+            "vbf_powhegPS_pythia_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -190,7 +190,7 @@ colors = {
 remove_proc = ["ewk_lljj_mll105_160_herwig", "ewk_lljj_mll105_160_pythia"]
 
 process_groups = [
-    ("higgs", ["ggh_amcPS_pythia_125", "vbf_amcPS_pythia_125", "wmh_125", "wph_125", "zh_125", "tth_125"]),
+    ("higgs", ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "wmh_125", "wph_125", "zh_125", "tth_125"]),
     ("vv", ["wz_3lnu", "ww_2l2nu", "wz_2l2q", "zz"]),
     ("vvv", ["www","wwz","wzz","zzz"]),
     ("ewk", ["ewk_lljj_mll50_mjj120_herwig", "ewk_lljj_mll105_160_ptJ_herwig"]),
@@ -394,7 +394,7 @@ cross_sections = {
     "zzz": 0.01398
 }
 
-signal_samples = ["ggh_amcPS_pythia_125", "vbf_amcPS_pythia_125", "wmh_125", "wph_125", "zh_125", "tth_125"]
+signal_samples = ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "wmh_125", "wph_125", "zh_125", "tth_125"]
 #jec_unc = [
 #    'AbsoluteMPFBias', 'AbsoluteScale', 'AbsoluteStat',
 #    'FlavorQCD', 'TimePtEta', 'Fragmentation', 'PileUpDataMC',
@@ -628,10 +628,14 @@ analysis_parameters = {
         #If true, apply mjj > cut, otherwise inverse
         "vbf_filter_mjj_cut": 350,
         "vbf_filter": {
-            "dy_m105_160_mg": True,
-            "dy_m105_160_amc": True,
-            "dy_m105_160_vbf_mg": False,
-            "dy_m105_160_vbf_amc": False, 
+            "dy_m105_160_mg_01j": True,
+            "dy_m105_160_amc_01j": True,
+            "dy_m105_160_mg_2j": True,
+            "dy_m105_160_amc_2j": True,
+            "dy_m105_160_vbf_mg_01j": False,
+            "dy_m105_160_vbf_amc_01j": False, 
+            "dy_m105_160_vbf_mg_2j": False,
+            "dy_m105_160_vbf_amc_2j": False,
         },
         "ggh_nnlops_reweight": {
             "ggh_amc_pythia_125": 1,
