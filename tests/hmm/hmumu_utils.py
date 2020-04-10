@@ -31,7 +31,7 @@ NUMPY_LIB = None
 #debug = False
 debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [ 540461 ,   541877 ,  1323125 ,  1413248  , 1950025  , 1950490 ,  2149410]
+debug_event_ids = [ 1950025  , 1950490 ,  2149410]
 
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
@@ -429,54 +429,47 @@ def analyze_data(
     jet_pt_startfrom = "pt_jec"
             
     for uncertainty_name in syst_to_consider:
+        # First get the jet mask each uncertainty_name
+        pass_jer_bin = NUMPY_LIB.ones_like(ret_mu['selected_events'])
+        if 'jer' in uncertainty_name:
+            ret_jet_temp = get_selected_jets(
+                scalars,
+                jets_passing_id,
+                ret_mu['selected_events'],
+                parameters["jet_pt_subleading"][dataset_era],
+                parameters["jet_btag_medium"][dataset_era],
+                parameters["jet_btag_loose"][dataset_era],
+                is_mc, use_cuda
+            )
+            j_attrs = ["pt", "eta", "phi"]
+            temp_subleading_jet = jets_passing_id.select_nth(
+                1, ret_mu['selected_events'], ret_jet_temp["selected_jets"],
+                attributes=j_attrs)
+                
+            j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
+            pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
+            
+        is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
+        jet_mask_bin = NUMPY_LIB.zeros_like(jets_passing_id.pt)
+        for k in range(0,len(is_jer_event)):
+            if(is_jer_event[k]):
+                for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
+                    jet_mask_bin[jc] = 1.
+
         #This will be the variated pt vector
         #print("computing variated pt for", uncertainty_name)
-        if ("jer" not in  uncertainty_name):
-            var_up_down = jet_systematics.get_variated_pts(uncertainty_name, startfrom=jet_pt_startfrom)
-        else:
-            var_up_down = jet_systematics.get_variated_pts("jer", startfrom="pt_jec_jer") # This is just to have a valid option in get_variated_pts, "jerB1" isn't accepted in this function.
-        
+        var_up_down = jet_systematics.get_variated_pts(uncertainty_name, jet_mask_bin, startfrom=jet_pt_startfrom)
+
         for jet_syst_name, jet_pt_vec in var_up_down.items():
+            
+                
             # For events where the JEC/JER was variated, fill only the nominal weight
             weights_selected = select_weights(weights_final, jet_syst_name)
             jet_pt_change = (jet_pt_vec - jets_passing_id.pt).mean()
             
-            if 'jer' in uncertainty_name:
-                jet_syst_name = (uncertainty_name , jet_syst_name[1]) #For correctly dealing with the histogram names for split JER
             # Configure the jet pt vector to the variated one
             # Would need to also do the mass here
-            if(('jer' not in uncertainty_name) and is_mc): 
-                jets_passing_id.pt = jet_pt_vec
-            elif(is_mc and "jer" in  uncertainty_name): #for correct treatment of up/down syst for jer bins
-                nom_vec= jet_systematics.get_variated_pts('nominal', startfrom='pt_jec')
-                for js_n, new_pt_vec in nom_vec.items():
-                    jets_passing_id.pt = new_pt_vec #down smearing is same as nominal
-                jet_pt_diff = NUMPY_LIB.zeros_like(jets_passing_id.pt)
-                if (jet_syst_name[1] == 'up') :
-                    jet_pt_diff = NUMPY_LIB.zeros_like(jets_passing_id.pt)
-                    ret_jet_temp = get_selected_jets(
-                        scalars,
-                        jets_passing_id,
-                        ret_mu['selected_events'],
-                        parameters["jet_pt_subleading"][dataset_era],
-                        parameters["jet_btag_medium"][dataset_era],
-                        parameters["jet_btag_loose"][dataset_era],
-                        is_mc, use_cuda
-                    )
-                    j_attrs = ["pt", "eta", "phi"]
-                    temp_subleading_jet = jets_passing_id.select_nth(
-                        1, ret_mu['selected_events'], ret_jet_temp["selected_jets"],
-                        attributes=j_attrs)
-                    
-                    j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
-                    pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
-                    is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
-                    for k in range(0,len(is_jer_event)):
-                        if(is_jer_event[k]):
-                            for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
-                                jet_pt_diff[jc] = jet_systematics.pt_jec_jer[jc] - jets_passing_id.pt[jc]
-                                jets_passing_id.pt[jc] = jet_systematics.pt_jec_jer[jc] #nominal jer smearing is now up 
-                jet_pt_change = jet_pt_diff.mean()
+            jets_passing_id.pt = jet_pt_vec
                     
             #Do the pt-dependent jet analysis now for all jets
             ret_jet = get_selected_jets(
@@ -3106,7 +3099,7 @@ class JetTransformer:
         jec_unc_vec = jec_unc_func(*func_args)
         return self.NUMPY_LIB.array(jec_unc_vec)
 
-    def get_variated_pts(self, variation_name, startfrom="pt_jec_jer"):
+    def get_variated_pts(self, variation_name, jet_mask_bin, startfrom="pt_jec_jer"):
         ptvec = getattr(self, startfrom)
         if variation_name in self.jet_uncertainty_names:
             corrs_up_down = self.NUMPY_LIB.array(self.apply_jec_unc(startfrom, variation_name), dtype=self.NUMPY_LIB.float32)
@@ -3114,10 +3107,10 @@ class JetTransformer:
                 (variation_name, "up"): ptvec*corrs_up_down[:, 0],
                 (variation_name, "down"): ptvec*corrs_up_down[:, 1]
             }
-        elif variation_name == "jer":
+        elif "jer" in variation_name :
             return {
-                ("jer", "up"): ptvec*self.jer_up,
-                ("jer", "down"): ptvec*self.jer_down
+                ("jer", "up"): np.where(jet_mask_bin, ptvec, self.pt_jec_jer),
+                ("jer", "down"): ptvec
             }
         elif variation_name == "nominal":
             return {("nominal", ""): ptvec}
