@@ -99,10 +99,8 @@ def analyze_data(
         LHEScalew = data.structs["LHEScaleWeight"][0]
     
     LHEPdfw = None
-    nLHEPdfw = 0
     if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
         LHEPdfw = data.structs["LHEPdfWeight"][0]
-        nLHEPdfw = scalars["nLHEPdfWeight"][0]
     histo_bins = parameters["histo_bins"]
 
     #first mask of all events enabled
@@ -353,7 +351,7 @@ def analyze_data(
     #compute variated weights here to ensure the nominal weight contains all possible other weights  
     compute_event_weights(parameters, weights_individual, scalars,
         genweight_scalefactor, gghnnlopsw, ZpTw,
-        LHEScalew, LHEPdfw, nLHEPdfw, analysis_corrections.pu_corrections, is_mc, dataset_era, dataset_name, use_cuda)
+        LHEScalew, LHEPdfw,  analysis_corrections.pu_corrections, is_mc, dataset_era, dataset_name, use_cuda)
 
     #actually multiply all the weights together with the appropriate up/down variations.
     #creates a 1-level dictionary with weights "nominal", "puweight__up", "puweight__down", ..." 
@@ -948,7 +946,7 @@ def finalize_weights(weights, dataset_era, all_weight_names=None):
             print("finalized weight", k, ret[k].mean())
     return ret
 
-def compute_event_weights(parameters, weights, scalars, genweight_scalefactor, gghw, zptw, LHEScalew, LHEPdfw, nLHEPdfw, pu_corrections, is_mc, dataset_era, dataset_name, use_cuda):
+def compute_event_weights(parameters, weights, scalars, genweight_scalefactor, gghw, zptw, LHEScalew, LHEPdfw,  pu_corrections, is_mc, dataset_era, dataset_name, use_cuda):
     if is_mc:
         if dataset_name in parameters["ggh_nnlops_reweight"]:
             weights["nominal"]["nominal"] = scalars["genWeight"] * genweight_scalefactor * gghw
@@ -3463,10 +3461,6 @@ def create_datastructure(dataset_name, is_mc, dataset_era, do_fsr=False):
             datastructures["EventVariables"] += [
                 ("nLHEPdfWeight", "uint32")
         ]
-        if "dy" in dataset_name or "ewk" in dataset_name or "ggh" in dataset_name or "vbf" in dataset_name or "wmh" in dataset_name or "wph" in dataset_name or "zh" in dataset_name or "tth" in dataset_name:
-            datastructures["EventVariables"] += [
-                ("nLHEPdfWeight", "int32")
-            ]
         if dataset_era == "2016" or dataset_era == "2017":
             datastructures["EventVariables"] += [
                 ("L1PreFiringWeight_Nom", "float32"),
