@@ -459,7 +459,8 @@ def analyze_data(
         var_up_down = jet_systematics.get_variated_pts(uncertainty_name, jet_mask_bin, startfrom=jet_pt_startfrom)
 
         for jet_syst_name, jet_pt_vec in var_up_down.items():
-            
+            if 'jer' in uncertainty_name:
+                jet_syst_name = (uncertainty_name,jet_syst_name[1])
                 
             # For events where the JEC/JER was variated, fill only the nominal weight
             weights_selected = select_weights(weights_final, jet_syst_name)
@@ -767,7 +768,6 @@ def analyze_data(
                         weights_in_dnn_presel,
                         use_cuda
                     )
-                    
          #end of isyst loop
     #end of uncertainty_name loop
 
