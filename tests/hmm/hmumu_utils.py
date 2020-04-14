@@ -446,7 +446,10 @@ def analyze_data(
                 
             j2_eta_abs = NUMPY_LIB.abs(temp_subleading_jet["eta"])
             pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
-            
+        #calculate the associated genpt for every reco jet
+        jet_genpt = NUMPY_LIB.zeros(jets_passing_id.numobjects(), dtype=NUMPY_LIB.float32)
+        get_genJetpt_cpu(jets_passing_id.offsets, jets_passing_id.pt, jets_passing_id.genJetIdx, genJet.offsets, genJet.pt, jet_genpt)
+
         is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
         jet_mask_bin = NUMPY_LIB.zeros_like(jets_passing_id.pt)
         for k in range(0,len(is_jer_event)):
@@ -456,7 +459,7 @@ def analyze_data(
 
         #This will be the variated pt vector
         #print("computing variated pt for", uncertainty_name)
-        var_up_down = jet_systematics.get_variated_pts(uncertainty_name, jet_mask_bin, startfrom=jet_pt_startfrom)
+        var_up_down = jet_systematics.get_variated_pts(uncertainty_name, jet_mask_bin, jet_genpt, startfrom=jet_pt_startfrom)
 
         for jet_syst_name, jet_pt_vec in var_up_down.items():
             if 'jer' in uncertainty_name:
@@ -3084,7 +3087,7 @@ class JetTransformer:
         jec_unc_vec = jec_unc_func(*func_args)
         return self.NUMPY_LIB.array(jec_unc_vec)
 
-    def get_variated_pts(self, variation_name, jet_mask_bin, startfrom="pt_jec_jer"):
+    def get_variated_pts(self, variation_name, jet_mask_bin, jet_genpt, startfrom="pt_jec_jer"):
         ptvec = getattr(self, startfrom)
         if variation_name in self.jet_uncertainty_names:
             corrs_up_down = self.NUMPY_LIB.array(self.apply_jec_unc(startfrom, variation_name), dtype=self.NUMPY_LIB.float32)
@@ -3093,14 +3096,32 @@ class JetTransformer:
                 (variation_name, "down"): ptvec*corrs_up_down[:, 1]
             }
         elif "jer" in variation_name :
+            # Based in part from A. Rizzi's code: https://github.com/arizzi/PisaHmm/blob/49cb2a112f326b07dd133118d973be0901d45287/systematics.py
+            jerSF = (self.pt_jec_jer-jet_genpt)/(ptvec-jet_genpt+(ptvec==jet_genpt)*(self.pt_jec_jer-ptvec))
+            jerDownSF = ((ptvec*self.jer_down)-jet_genpt)/(ptvec-jet_genpt+(ptvec==jet_genpt)*10.)
+            jerDown_pt = jet_genpt+ (ptvec - jet_genpt)*(jerDownSF/jerSF)
             return {
                 ("jer", "up"): np.where(jet_mask_bin, ptvec, self.pt_jec_jer),
-                ("jer", "down"): ptvec
+                ("jer", "down"): np.where(jet_mask_bin, ptvec, jerDown_pt)
             }
         elif variation_name == "nominal":
             return {("nominal", ""): ptvec}
         else:
             raise KeyError("Variation name {0} was not defined in JetMetCorrections corrections".format(variation_name))
+
+@numba.njit(parallel=True, fastmath=True)
+def get_genJetpt_cpu(reco_offsets, reco_pt, reco_genPartIdx, genparts_offsets, genparts_pt, out_reco_genpt):
+    #loop over events
+    for iev in numba.prange(len(reco_offsets) - 1):
+        #loop over muons
+        for imu in range(reco_offsets[iev], reco_offsets[iev + 1]):
+            #get index of genparticle that reco particle was matched to
+            idx_gp = reco_genPartIdx[imu]
+            if idx_gp >= 0 and len(genparts_pt) > (genparts_offsets[iev] + idx_gp):
+                genpt = genparts_pt[genparts_offsets[iev] + idx_gp]
+                out_reco_genpt[imu] = genpt
+            else :
+                out_reco_genpt[imu] = reco_pt[imu]
 
 def multiply_all(weight_list):
     ret = NUMPY_LIB.copy(weight_list[0])
