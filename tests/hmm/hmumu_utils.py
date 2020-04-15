@@ -448,7 +448,8 @@ def analyze_data(
             pass_jer_bin = NUMPY_LIB.logical_and(j2_eta_abs > parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][0], NUMPY_LIB.logical_and(j2_eta_abs < parameters["jer_pt_eta_bins"][uncertainty_name]["eta"][1], NUMPY_LIB.logical_and(temp_subleading_jet["pt"] > parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][0],temp_subleading_jet["pt"] < parameters["jer_pt_eta_bins"][uncertainty_name]["pt"][1])))
         #calculate the associated genpt for every reco jet
         jet_genpt = NUMPY_LIB.zeros(jets_passing_id.numobjects(), dtype=NUMPY_LIB.float32)
-        get_genJetpt_cpu(jets_passing_id.offsets, jets_passing_id.pt, jets_passing_id.genJetIdx, genJet.offsets, genJet.pt, jet_genpt)
+        if is_mc:
+            get_genJetpt_cpu(jets_passing_id.offsets, jets_passing_id.pt, jets_passing_id.genJetIdx, genJet.offsets, genJet.pt, jet_genpt)
 
         is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
         jet_mask_bin = NUMPY_LIB.zeros_like(jets_passing_id.pt)
