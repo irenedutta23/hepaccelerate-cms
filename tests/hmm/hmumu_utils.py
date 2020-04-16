@@ -453,11 +453,7 @@ def analyze_data(
 
         is_jer_event = NUMPY_LIB.logical_and(ret_mu["selected_events"],pass_jer_bin)
         jet_mask_bin = NUMPY_LIB.zeros_like(jets_passing_id.pt)
-        for k in range(0,len(is_jer_event)):
-            if(is_jer_event[k]):
-                for jc in range(jets_passing_id.offsets[k], jets_passing_id.offsets[k+1]):
-                    jet_mask_bin[jc] = 1.
-
+        ha.broadcast(jets_passing_id.offsets,is_jer_event,jet_mask_bin)
         #This will be the variated pt vector
         #print("computing variated pt for", uncertainty_name)
         var_up_down = jet_systematics.get_variated_pts(uncertainty_name, jet_mask_bin, jet_genpt, startfrom=jet_pt_startfrom)
