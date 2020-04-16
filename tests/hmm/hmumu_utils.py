@@ -20,7 +20,7 @@ import hepaccelerate.backend_cpu as backend_cpu
 
 from coffea.lookup_tools import extractor
 
-from pars import runmap_numerical, runmap_numerical_r, data_runs, genweight_scalefactor
+from pars import runmap_numerical, runmap_numerical_r, data_runs, genweight_scalefactor, jer_unc
 
 #global variables need to be configured here for the hepaccelerate backend and numpy library
 #they will be overwritten later
@@ -340,7 +340,7 @@ def analyze_data(
     # PU ID weights are only applied to 2016 and 2018 so far, as they haven't been validated for 2017
     # https://github.com/jpata/hepaccelerate-cms/pull/66
     if (parameters["jet_puid"] != "none") and is_mc:
-        puid_weights = get_puid_weights(jets_passing_id, passed_puid, analysis_corrections.puidreweighting, dataset_era, parameters["jet_puid"], parameters["jet_pt_subleading"][dataset_era], parameters["jet_puid_pt_max"], use_cuda)
+        puid_weights = get_puid_weights(jets, passed_puid, analysis_corrections.puidreweighting, dataset_era, parameters["jet_puid"], parameters["jet_pt_subleading"][dataset_era], parameters["jet_puid_pt_max"], use_cuda)
         weights_individual["jet_puid"] = {"nominal": puid_weights, "up": puid_weights, "down": puid_weights}
 
     if is_mc and parameters["apply_btag"]:
@@ -415,7 +415,7 @@ def analyze_data(
     if is_mc:
         syst_to_consider += ["Total"]
         if parameters["do_jer"][dataset_era]: 
-            jer_syst = ["jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2"]
+            jer_syst = jer_unc
             syst_to_consider = syst_to_consider + jer_syst
         if parameters["do_factorized_jec"]:
             syst_to_consider = syst_to_consider + jet_systematics.jet_uncertainty_names

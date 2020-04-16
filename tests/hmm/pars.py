@@ -4,7 +4,7 @@ categories = {
     "dimuon": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -25,7 +25,7 @@ categories = {
     "z_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -46,7 +46,7 @@ categories = {
     "h_sideband": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -70,7 +70,7 @@ categories = {
     "h_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "wmh_125",
             "wph_125",
             "zh_125",
@@ -99,12 +99,12 @@ proc_grps = [
         ("stop", ["st_tw_top", "st_tw_antitop"]),
         ("tt", ["ttjets_sl", "ttjets_dl",]),
     ]
-combined_signal_samples= ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "vh_125", "tth_125"]
+combined_signal_samples= ["ggh_amcPS_pythia_125", "vbf_powheg_pythia_dipole_125", "vh_125", "tth_125"]
 combined_categories = {
     "dimuon": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -121,7 +121,7 @@ combined_categories = {
     "z_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -138,7 +138,7 @@ combined_categories = {
     "h_sideband": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -158,7 +158,7 @@ combined_categories = {
     "h_peak": {
         "datacard_processes" : [
             "ggh_amcPS_pythia_125",
-            "vbf_powhegPS_pythia_125",
+            "vbf_powheg_pythia_dipole_125",
             "vh_125",
             "tth_125",
             #"wz_1l1nu2q",
@@ -190,7 +190,7 @@ colors = {
 remove_proc = ["ewk_lljj_mll105_160_herwig", "ewk_lljj_mll105_160_pythia"]
 
 process_groups = [
-    ("higgs", ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "wmh_125", "wph_125", "zh_125", "tth_125"]),
+    ("higgs", ["ggh_amcPS_pythia_125", "vbf_powheg_pythia_dipole_125", "wmh_125", "wph_125", "zh_125", "tth_125"]),
     ("vv", ["wz_3lnu", "ww_2l2nu", "wz_2l2q", "zz"]),
     ("vvv", ["www","wwz","wzz","zzz"]),
     ("ewk", ["ewk_lljj_mll50_mjj120_herwig", "ewk_lljj_mll105_160_ptJ_herwig"]),
@@ -325,6 +325,7 @@ cross_sections = {
     "vbf_powheg_herwig_125": 0.000823,
     "vbf_powheg_pythia_125": 0.000823,
     "vbf_powhegPS_pythia_125": 0.000823,
+    "vbf_powheg_pythia_dipole_125": 0.000823,
     "vbf_amc_herwig_125": 0.000823,
     "vbf_amcPS_TuneCP5down_125": 0.000823,
     "vbf_amcPS_TuneCP5up_125": 0.000823,
@@ -412,9 +413,10 @@ signal_samples = ["ggh_amcPS_pythia_125", "vbf_powhegPS_pythia_125", "wmh_125", 
 #Reduced JEC
 jec_unc = ['Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', 'FlavorQCD', 'HF', 'HF2018', 'RelativeBal', 'RelativeSample2018', 'Absolute2017', 'BBEC12017', 'EC22017', 'HF2017', 'RelativeSample2017', 'Absolute2016', 'BBEC12016', 'EC22016', 'HF2016', 'RelativeSample2016']
 
+jer_unc = ["jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2"]
 #Uncomment to use just the total JEC for quick tests
 #jec_unc = ["Total"]
-shape_systematics = jec_unc + ["jerB1","jerB2","jerEC1","jerEC2","jerF1","jerF2", "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl","LHEPdfWeight","EWZ105160PS"]
+shape_systematics = jec_unc + jer_unc + [ "trigger", "id", "iso", "jet_puid","puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","btag_weight_bcFl","btag_weight_lFl","LHEPdfWeight","EWZ105160PS"]
 common_scale_uncertainties = {
     "lumi": 1.025,
 }
