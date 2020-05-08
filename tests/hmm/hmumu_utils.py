@@ -31,8 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [ 1950025  , 1950490 ,  2149410]
-
+debug_event_ids = [ 8557645, 8557549, 8557904, 8557617, 8558103, 8558340 ]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -2108,20 +2107,18 @@ def get_factorized_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
             SF_btag = evaluator[tag_name].eval(tsys_name, jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jet_pt, jets.btagDeepB, True)
             if sdir == 'up':
                 p_jetWt_up[i]*=SF_btag
+                p_jetWt_up[i][pt_eta_mask] = 1.
+                #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
+                # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
+                p_jetWt_up[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_up[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
+                compute_event_btag_weight_shape(jets.offsets, p_jetWt_up[i], eventweight_btag_up[i])
             else:
                 p_jetWt_down[i]*=SF_btag
-                if sdir == 'up':
-                    p_jetWt_up[i][pt_eta_mask] = 1.
-                    #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
-                    # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
-                    p_jetWt_up[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_up[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
-                    compute_event_btag_weight_shape(jets.offsets, p_jetWt_up[i], eventweight_btag_up[i])
-                else:
-                    p_jetWt_down[i][pt_eta_mask] = 1.
-                    #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
-                    # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
-                    p_jetWt_down[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_down[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
-                    compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
+                p_jetWt_down[i][pt_eta_mask] = 1.
+                #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
+                # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
+                p_jetWt_down[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_down[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
+                compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
                     
         if debug:
             for evtid in debug_event_ids:
