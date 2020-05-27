@@ -9,7 +9,7 @@ import uproot
 import copy
 import multiprocessing
 
-from pars import catnames, varnames, analysis_names, shape_systematics, controlplots_shape, genweight_scalefactor, lhe_pdf_variations, decorrelate_syst, dymodel_DNN_reshape
+from pars import catnames, varnames, analysis_names, shape_systematics, controlplots_shape, genweight_scalefactor, lhe_pdf_variations, decorrelate_syst, dymodel_DNN_reshape, rename_syst, org_syst
 from pars import process_groups, colors, extra_plot_kwargs,proc_grps,combined_signal_samples, remove_proc
 
 from scipy.stats import wasserstein_distance
@@ -1070,7 +1070,8 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
         dcof.write("R_2j_{1} rateParam {0} dy_m105_160_vbf_amc_2j 1 \n".format(cat.full_name,str(era)))
         #dcof.write("REWZ rateParam {0} ewk_lljj_mll105_160 1 \n".format(cat.full_name))
     dcof.write("{0} autoMCStats 0 0 1 \n".format(cat.full_name))
-    
+    for isyst in range(len(rename_syst)):
+        dcof.write("nuisance edit rename .*.* * {0} {1} \n".format(org_syst[isyst],rename_syst[isyst]))
     for isyst in decorrelate_syst:
         dcof.write("nuisance edit rename .*.* * {0} {0}_{1} \n".format(isyst,str(era)))
     dcof.write("\n")
