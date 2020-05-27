@@ -441,7 +441,15 @@ btag_unc = ["btag_weight_jes","btag_weight_lf","btag_weight_hfstats1","btag_weig
 
 shape_systematics = jec_unc + jer_unc + VBF_STXS_unc + btag_unc + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "puWeight", "L1PreFiringWeight","DYLHEScaleWeightZ","EWZLHEScaleWeightZ","DYLHEScaleWeight","EWZLHEScaleWeight","LHEPdfWeight","EWZ105160PS", "VBFHPS","DYshape_DNN"] 
 
-decorrelate_syst = jer_unc + btag_unc + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "puWeight", "L1PreFiringWeight", "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+jec_unc_rename = ['CMS_scale_j_absolute', 'CMS_scale_j_absolute_2018', 'CMS_scale_j_bbec1', 'CMS_scale_j_bbec1_2018', 'CMS_scale_j_ec2', 'CMS_scale_j_ec2_2018', 'CMS_scale_j_flavorQCD', 'CMS_scale_j_hf', 'CMS_scale_j_hf_2018', 'CMS_scale_j_relativeBal', 'CMS_scale_j_relativeSample_2018', 'CMS_scale_j_absolute_2017', 'CMS_scale_j_bbec1_2017', 'CMS_scale_j_ec2_2017', 'CMS_scale_j_hf_2017', 'CMS_scale_j_relativeSample_2017', 'CMS_scale_j_absolute_2016', 'CMS_scale_j_bbec1_2016', 'CMS_scale_j_ec2_2016', 'CMS_scale_j_hf_2016', 'CMS_scale_j_relativeSample_2016']
+
+jer_unc_rename = ["CMS_res_j_barrel", "CMS_res_j_endcap1", "CMS_res_j_endcap2lowpt", "CMS_res_j_endcap2highpt", "CMS_res_j_forwardlowpt", "CMS_res_j_forwardhighpt"]
+
+btag_unc_rename = ["CMS_btag_jes","CMS_btag_Lf","CMS_btag_Hfstats1","CMS_btag_Hfstats2","CMS_btag_Cferr1","CMS_btag_Cferr2","CMS_btag_Hf","CMS_btag_Lfstats1","CMS_btag_Lfstats2"]
+
+rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename
+org_syst = jec_unc + jer_unc+ btag_unc
+decorrelate_syst = jer_unc_rename + btag_unc_rename + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "puWeight", "L1PreFiringWeight", "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
 
 common_scale_uncertainties = {
     "lumi2016": {
