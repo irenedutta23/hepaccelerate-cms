@@ -1101,7 +1101,11 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
     dcof.write("---------------------\n")
 
     for isyst in range(len(rename_syst)):
-        dcof.write("nuisance edit rename .*.* * {0} {1} \n".format(org_syst[isyst],rename_syst[isyst]))
+        if("btag" not in rename_syst[isyst] and "scale_j" not in rename_syst[isyst]):
+            dcof.write("nuisance edit rename .*.* * {0} {1}_{2} \n".format(org_syst[isyst],rename_syst[isyst]),str(era))
+        else:
+            dcof.write("nuisance edit rename .*.* * {0} {1} \n".format(org_syst[isyst],rename_syst[isyst]))
+
     for isyst in decorrelate_syst:
         dcof.write("nuisance edit rename .*.* * {0} {0}_{1} \n".format(isyst,str(era)))
 
@@ -1111,6 +1115,7 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
         dcof.write("nuisance edit rename {0} * qgl_weight qgl_weightPYDIPOLE_{1} \n".format(iproc,str(era)))
     for iproc in herwig_samp:
         dcof.write("nuisance edit rename {0} * qgl_weight qgl_weightHER_{1} \n".format(iproc,str(era)))
+
     dcof.write("\n")
     dcof.write("# Execute with:\n")
     dcof.write("# combine -n {0} -M FitDiagnostics -t -1 {1} \n".format(cat.full_name, os.path.basename(ofname)))

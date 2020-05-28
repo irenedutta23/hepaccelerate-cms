@@ -452,7 +452,7 @@ btag_unc_rename = ["CMS_btag_jes","CMS_btag_Lf","CMS_btag_Hfstats1","CMS_btag_Hf
 other_syst_rename = ["CMS_pileup_vbf", "CMS_prefiring"]
 rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename + other_syst_rename
 org_syst = jec_unc + jer_unc+ btag_unc + ["puWeight", "L1PreFiringWeight"]
-decorrelate_syst = jer_unc_rename + btag_unc_rename + other_syst_rename + ["trigger", "id", "iso", "jet_puid",  "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+decorrelate_syst = ["trigger", "id", "iso", "jet_puid",  "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
 
 py_samp = ["ggh_amcPS_pythia_125", "dy_m105_160_01j", "dy_m105_160_2j","top", "vv", "vh_125"]
 herwig_samp = ["ewk_lljj_mll105_160_ptJ_herwig"]
