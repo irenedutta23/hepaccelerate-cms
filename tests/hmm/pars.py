@@ -459,47 +459,47 @@ herwig_samp = ["ewk_lljj_mll105_160_ptJ_herwig"]
 pydipole_samp = ["vbf_powheg_pythia_dipole_125"]
 
 common_scale_uncertainties = {
-    "lumi2016": {
+    "lumi_13TeV_2016": {
         "2016":1.022,
         "2017":1.0,
         "2018":1.0,
     },
-    "lumi2017": {
+    "lumi_13TeV_2017": {
         "2016":1.0,
         "2017":1.02,
         "2018":1.0,
     },
-    "lumi2018": {
+    "lumi_13Tev_2018": {
         "2016":1.0,
         "2017":1.0,
         "2018":1.015,
     },
-    "lumi_XYfac":{
+    "lumi_13Tev_XY":{
         "2016":1.009,
         "2017":1.008,
         "2018":1.02,
     },
-    "lumi_lengthScale":{
+    "lumi_13Tev_LS":{
         "2016":1.0,
         "2017":1.003,
         "2018":1.002,
     },
-    "lumi_BBDeflect":{
+    "lumi_13Tev_BBD":{
         "2016":1.004,
         "2017":1.004,
         "2018":1.0,
     },
-    "lumi_dynamicBeta":{
+    "lumi_13Tev_DB":{
         "2016":1.005,
         "2017":1.005,
         "2018":1.0,
     },
-    "lumi_beamCalib":{
+    "lumi_13Tev_BCC":{
         "2016":1.0,
         "2017":1.003,
         "2018":1.002,
     },
-    "lumi_ghostSat":{
+    "lumi_13Tev_GS":{
         "2016":1.004,
         "2017":1.001,
         "2018":1.0,
