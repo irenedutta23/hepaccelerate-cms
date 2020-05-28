@@ -1102,7 +1102,7 @@ def PrintDatacard(categories, dict_procs, era, event_counts, filenames, ofname):
 
     for isyst in range(len(rename_syst)):
         if("btag" not in rename_syst[isyst] and "scale_j" not in rename_syst[isyst]):
-            dcof.write("nuisance edit rename .*.* * {0} {1}_{2} \n".format(org_syst[isyst],rename_syst[isyst]),str(era))
+            dcof.write("nuisance edit rename .*.* * {0} {1}_{2} \n".format(org_syst[isyst],rename_syst[isyst],str(era)))
         else:
             dcof.write("nuisance edit rename .*.* * {0} {1} \n".format(org_syst[isyst],rename_syst[isyst]))
 
