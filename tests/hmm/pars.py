@@ -99,6 +99,8 @@ categories = {
     }
 }
 proc_grps = [
+        ("dy_m105_160_01j", ["dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j"]),
+        ("dy_m105_160_2j", ["dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j"]),
         ("vh_125",["wmh_125", "wph_125", "zh_125"]),
         ("vv", ["wz_3lnu", "ww_2l2nu", "wz_2l2q", "zz", "www","wwz","wzz","zzz"]),
         ("top", ["ttjets_sl", "ttjets_dl", "st_tw_top", "st_tw_antitop"]),
@@ -156,8 +158,8 @@ combined_categories = {
             #"st_top",
             #"st_t_antitop",
             "top",
-            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
-            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
+            "dy_m105_160_01j",
+            "dy_m105_160_2j", 
             #"vvv",
         ],
     },
@@ -176,8 +178,8 @@ combined_categories = {
             #"st_top",
             #"st_t_antitop",
             "top",
-            "dy_m105_160_amc_01j", "dy_m105_160_vbf_amc_01j",
-            "dy_m105_160_amc_2j", "dy_m105_160_vbf_amc_2j",
+            "dy_m105_160_01j", 
+            "dy_m105_160_2j", 
             #"vvv",
         ],
     }
@@ -450,7 +452,11 @@ btag_unc_rename = ["CMS_btag_jes","CMS_btag_Lf","CMS_btag_Hfstats1","CMS_btag_Hf
 other_syst_rename = ["CMS_pileup_vbf", "CMS_prefiring"]
 rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename + other_syst_rename
 org_syst = jec_unc + jer_unc+ btag_unc + ["puWeight", "L1PreFiringWeight"]
-decorrelate_syst = jer_unc_rename + btag_unc_rename + other_syst_rename + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+decorrelate_syst = jer_unc_rename + btag_unc_rename + other_syst_rename + ["trigger", "id", "iso", "jet_puid",  "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+
+py_samp = ["ggh_amcPS_pythia_125", "dy_m105_160_01j", "dy_m105_160_2j","top", "vv", "vh_125"]
+herwig_samp = ["ewk_lljj_mll105_160_ptJ_herwig"]
+pydipole_samp = ["vbf_powheg_pythia_dipole_125"]
 
 common_scale_uncertainties = {
     "lumi2016": {
