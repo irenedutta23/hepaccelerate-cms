@@ -447,9 +447,10 @@ jer_unc_rename = ["CMS_res_j_barrel", "CMS_res_j_endcap1", "CMS_res_j_endcap2low
 
 btag_unc_rename = ["CMS_btag_jes","CMS_btag_Lf","CMS_btag_Hfstats1","CMS_btag_Hfstats2","CMS_btag_Cferr1","CMS_btag_Cferr2","CMS_btag_Hf","CMS_btag_Lfstats1","CMS_btag_Lfstats2"]
 
-rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename
-org_syst = jec_unc + jer_unc+ btag_unc
-decorrelate_syst = jer_unc_rename + btag_unc_rename + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "puWeight", "L1PreFiringWeight", "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+other_syst_rename = ["CMS_pileup_vbf", "CMS_prefiring"]
+rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename + other_syst_rename
+org_syst = jec_unc + jer_unc+ btag_unc + ["puWeight", "L1PreFiringWeight"]
+decorrelate_syst = jer_unc_rename + btag_unc_rename + other_syst_rename + ["trigger", "id", "iso", "jet_puid", "qgl_weight", "DYLHEScaleWeight","EWZLHEScaleWeight","EWKLHEScaleWeight_norm", "LHEPdfWeight","LHEPdfWeight_norm","EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
 
 common_scale_uncertainties = {
     "lumi2016": {
