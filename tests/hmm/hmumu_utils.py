@@ -358,7 +358,6 @@ def analyze_data(
     #if (parameters["jet_puid"] != "none") and is_mc:
     #    puid_weights = get_puid_weights(jets_wopuid, analysis_corrections.puidreweighting, dataset_era, parameters["jet_puid"], temp_subjet["pt"], parameters["jet_pt_subleading"][dataset_era], parameters["jet_puid_pt_max"], use_cuda)
     #    weights_individual["jet_puid"] = {"nominal": puid_weights, "up": puid_weights, "down": puid_weights}
-
     if is_mc and parameters["apply_btag"]:
         btagWeights, btagWeights_up, btagWeights_down = get_factorized_btag_weights_shape(jets_passing_id, analysis_corrections.btag_weights, dataset_era, scalars, parameters["jet_pt_subleading"][dataset_era])
         weights_individual["btag_weight"] = {"nominal": btagWeights, "up": NUMPY_LIB.ones_like(btagWeights), "down": NUMPY_LIB.ones_like(btagWeights)}
@@ -3159,7 +3158,7 @@ class JetTransformer:
             self.corr_jec = self.apply_jec_data()
 
         self.corr_jec = self.NUMPY_LIB.array(self.corr_jec)
-        self.pt_jec = self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
+        self.pt_jec = self.jets.pt #self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
         
         if self.is_mc:
             self.msk_no_genjet = (self.jets.genpt==0)
