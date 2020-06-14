@@ -439,7 +439,7 @@ def analyze_data(
         jets_passing_id, scalars,
         parameters,
         analysis_corrections.jetmet_corrections[dataset_era][parameters["jec_tag"][dataset_era]],
-        NUMPY_LIB, ha, use_cuda, is_mc)
+        NUMPY_LIB, ha, use_cuda, is_mc, dataset_era)
 
     syst_to_consider = ["nominal"]
     if is_mc:
@@ -3121,7 +3121,7 @@ def get_jer_smearfactors(pt_or_m, ratio_jet_genjet, msk_no_genjet, resos, resosf
 
 
 class JetTransformer:
-    def __init__(self, jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, ha, use_cuda, is_mc):
+    def __init__(self, jets, scalars, parameters, jetmet_corrections, NUMPY_LIB, ha, use_cuda, is_mc, era):
         self.jets = jets
         self.scalars = scalars
         self.jetmet_corrections = jetmet_corrections
@@ -3158,7 +3158,10 @@ class JetTransformer:
             self.corr_jec = self.apply_jec_data()
 
         self.corr_jec = self.NUMPY_LIB.array(self.corr_jec)
-        self.pt_jec = self.jets.pt #self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
+        if era == '2016' :
+            self.pt_jec = self.jets.pt 
+        else:
+            self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
         
         if self.is_mc:
             self.msk_no_genjet = (self.jets.genpt==0)
