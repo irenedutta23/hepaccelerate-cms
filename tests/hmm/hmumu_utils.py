@@ -3161,7 +3161,7 @@ class JetTransformer:
         if era == '2016' :
             self.pt_jec = self.jets.pt 
         else:
-            self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
+            self.pt_jec = self.NUMPY_LIB.array(self.raw_pt) * self.corr_jec 
         
         if self.is_mc:
             self.msk_no_genjet = (self.jets.genpt==0)
