@@ -205,7 +205,7 @@ class TestAnalysis(unittest.TestCase):
         print(ret2["baseline"]["selected_events_dimuon"])
         self.assertAlmostEqual(ret2["num_events"], 142)
         self.assertAlmostEqual(ret2["int_lumi"], 0.130571592)
-        self.assertAlmostEqual(ret2["baseline"]["selected_events_dimuon"], 41)
+        self.assertAlmostEqual(ret2["baseline"]["selected_events_dimuon"], 44)
 
         #Not sure why this is different on the skimmed sample... floating point precision in changing the file encoding?
         #self.assertAlmostEqual(ret2["baseline"]["numev_passed"]["muon"], 4024.0)
