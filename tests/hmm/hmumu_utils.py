@@ -1553,7 +1553,7 @@ def get_selected_muons(
     }
 
 #Corrects the muon momentum and isolation, if a matched FSR photon with dR<0.4 is found
-@numba.njit(parallel=False)
+@numba.njit(parallel=True)
 def correct_muon_with_fsr(
         muons_offsets, fsr_offsets,
         muons_pt, muons_eta, muons_phi, muons_mass, muons_iso, muons_fsrIndex,
