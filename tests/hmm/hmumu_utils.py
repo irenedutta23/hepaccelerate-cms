@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [735225363]
+debug_event_ids = [178677823]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -273,8 +273,13 @@ def analyze_data(
                 jaggedstruct_print(muons, idx,
                     ["pt", "eta", "phi", "charge", "dxybs"])
 
-        do_geofit_corrections(analysis_corrections.miscvariables, muons, dataset_era)
+        do_geofit_corrections(analysis_corrections.miscvariables, muons, dataset_era, ret_mu['is_not_fsr'])
         if debug:
+            for evtid in debug_event_ids:
+                idx = np.where(scalars["event"] == evtid)[0][0]
+                print("muons")
+                jaggedstruct_print(muons, idx,
+                    ["pt", "eta", "phi", "charge", "dxybs"])
             print("After applying Geofit corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
             
     if is_mc:
@@ -1440,6 +1445,8 @@ def get_selected_muons(
             mu_phi = NUMPY_LIB.array(mu_phi)
             mu_mass = NUMPY_LIB.array(mu_mass)
             mu_iso = NUMPY_LIB.array(mu_iso)
+
+        is_not_fsr = (muons.pt == mu_pt)
         muons.pt = mu_pt
         muons.eta = mu_eta
         muons.phi = mu_phi
@@ -1543,6 +1550,7 @@ def get_selected_muons(
         "selected_muons": final_muon_sel,
         "muons_passing_os": muons_passing_os,
         "additional_muon_sel": additional_muon_sel,
+        "is_not_fsr": is_not_fsr,
     }
 
 #Corrects the muon momentum and isolation, if a matched FSR photon with dR<0.4 is found
@@ -2513,7 +2521,8 @@ Applies Geofit corrections on the selected two muons, returns the corrected pt
 def do_geofit_corrections(
     miscvariables,
     muons,
-    dataset_era):
+    dataset_era,
+is_not_fsr):
     years = int(dataset_era)*NUMPY_LIB.ones(len(muons.pt), dtype=NUMPY_LIB.int32)
     muon_pt_corr = miscvariables.ptcorrgeofit(
         NUMPY_LIB.asnumpy(muons.dxybs),
@@ -2523,7 +2532,9 @@ def do_geofit_corrections(
         years
     )
     muons.pfRelIso03_chg[:] = muons.pt[:] 
-    muons.pt[:] = muon_pt_corr[:]
+    for i in range(len(is_not_fsr)):
+        if is_not_fsr[i]:
+            muons.pt[i] = muon_pt_corr[i]
     return
 
 """
