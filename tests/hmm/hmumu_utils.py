@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [1464046016]
+debug_event_ids = [178677823]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
