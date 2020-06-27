@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [178677823]
+debug_event_ids = [2065509843]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -1409,7 +1409,7 @@ def get_selected_muons(
 
     passes_aeta = NUMPY_LIB.abs(muons.eta) < mu_aeta_cut
     passes_subleading_pt = muons.pt > mu_pt_cut_subleading
-
+    is_not_fsr =  NUMPY_LIB.ones_like(muons.pt, dtype=NUMPY_LIB.int32)
     if fsrphotons:
         out_muons_fsrPhotonIdx = NUMPY_LIB.asnumpy(muons.fsrPhotonIdx)
         mu_pt = NUMPY_LIB.asnumpy(muons.pt)
@@ -2532,7 +2532,7 @@ is_not_fsr):
         years
     )
     muons.pfRelIso03_chg[:] = muons.pt[:] 
-    for i in range(len(is_not_fsr)):
+    for i in numba.prange(len(is_not_fsr)):
         if is_not_fsr[i]:
             muons.pt[i] = muon_pt_corr[i]
     return
