@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [2065509843]
+debug_event_ids = [895581031]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -110,7 +110,6 @@ def analyze_data(
         mask_events = mask_events & NUMPY_LIB.array(analysis_corrections.lumimask[dataset_era](
             NUMPY_LIB.asnumpy(scalars["run"]),
             NUMPY_LIB.asnumpy(scalars["luminosityBlock"])))
- 
     check_and_fix_qgl(jets)
 
     #output histograms 
@@ -174,6 +173,7 @@ def analyze_data(
 
     #Get the mask of events that pass trigger selection
     mask_events = select_events_trigger(scalars, parameters, mask_events, parameters["hlt_bits"][dataset_era])
+    
     if not (mask_vbf_filter is None):
         mask_events = mask_events & mask_vbf_filter
 
@@ -192,7 +192,7 @@ def analyze_data(
             muons)
         if debug:
             print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
-
+        
     #get the two leading muons after applying all muon selection
     ret_mu = get_selected_muons(
         scalars,
@@ -1436,7 +1436,8 @@ def get_selected_muons(
             out_muons_fsrPhotonIdx,
             NUMPY_LIB.asnumpy(fsrphotons.pt),
             NUMPY_LIB.asnumpy(fsrphotons.eta),
-            NUMPY_LIB.asnumpy(fsrphotons.phi)
+            NUMPY_LIB.asnumpy(fsrphotons.phi),
+            is_not_fsr
         )
         #move back to GPU
         if use_cuda:
@@ -1446,7 +1447,6 @@ def get_selected_muons(
             mu_mass = NUMPY_LIB.array(mu_mass)
             mu_iso = NUMPY_LIB.array(mu_iso)
 
-        is_not_fsr = (muons.pt == mu_pt)
         muons.pt = mu_pt
         muons.eta = mu_eta
         muons.phi = mu_phi
@@ -1558,7 +1558,7 @@ def get_selected_muons(
 def correct_muon_with_fsr(
         muons_offsets, fsr_offsets,
         muons_pt, muons_eta, muons_phi, muons_mass, muons_iso, muons_fsrIndex,
-        fsr_pt, fsr_eta, fsr_phi
+        fsr_pt, fsr_eta, fsr_phi, is_not_fsr
     ):
 
     for iev in numba.prange(len(muons_offsets) - 1):
@@ -1610,7 +1610,7 @@ def correct_muon_with_fsr(
                 muons_pt[imu] = out_pt
                 muons_eta[imu] = out_eta
                 muons_phi[imu] = out_phi
-
+                is_not_fsr[imu] = 0
 
 def get_bit_values(array, bit_index):
     """
@@ -2459,8 +2459,8 @@ def select_events_trigger(scalars, parameters, mask_events, hlt_bits):
         "Flag_goodVertices",
         "Flag_BadChargedCandidateFilter"
     ]
-    for flag in flags:
-        mask_events = mask_events & scalars[flag]
+    #for flag in flags:
+    #    mask_events = mask_events & scalars[flag]
     
     pvsel = scalars["PV_npvsGood"] > parameters["nPV"]
     #pvsel = pvsel & (scalars["PV_ndof"] > parameters["NdfPV"])
