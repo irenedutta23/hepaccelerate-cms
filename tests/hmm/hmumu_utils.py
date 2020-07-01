@@ -28,10 +28,10 @@ ha = None
 NUMPY_LIB = None
 
 #Use this to turn on debugging
-debug = False
-#debug = True
+#debug = False
+debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [1464046016]
+debug_event_ids = [120568288]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -1216,7 +1216,7 @@ def run_analysis(
     job_descriptions,
     parameter_sets,
     analysis_corrections,
-    numev_per_chunk=100000):
+        numev_per_chunk=1000000):
 
     #Keep track of number of events
     nev_total = 0
@@ -1769,7 +1769,7 @@ def get_selected_jets_id(
         muons.masks["iso_id_aeta"], jet_dr_cut)
 
     jets.masks["pass_dr"] = jets_pass_dr
-    
+    import pdb;pdb.set_trace();
     selected_jets = selected_jets & jets_pass_dr
    
     '''
@@ -1799,7 +1799,7 @@ def get_selected_jets(
     Given jets and selected muons in events, choose jets that pass quality
     criteria and that are not dR-matched to muons.
     """
-
+    import pdb;pdb.set_trace();
     selected_jets = (jets.pt > jet_pt_cut_subleading)
  
     #produce a mask that selects the first two selected jets 
@@ -3827,7 +3827,7 @@ class thread_killer(object):
             self.to_kill = tokill
 
 class InputGen:
-    def __init__(self, job_descriptions, datapath, do_fsr, nthreads=1, events_per_file=100000):
+    def __init__(self, job_descriptions, datapath, do_fsr, nthreads=1, events_per_file=1000000):
         self.job_descriptions = job_descriptions
         self.chunk_lock = threading.Lock()
         self.loaded_lock = threading.Lock()
