@@ -1217,7 +1217,7 @@ def run_analysis(
     job_descriptions,
     parameter_sets,
     analysis_corrections,
-        numev_per_chunk=1000000):
+        numev_per_chunk=100000):
 
     #Keep track of number of events
     nev_total = 0
@@ -3835,7 +3835,7 @@ class thread_killer(object):
             self.to_kill = tokill
 
 class InputGen:
-    def __init__(self, job_descriptions, datapath, do_fsr, nthreads=1, events_per_file=1000000):
+    def __init__(self, job_descriptions, datapath, do_fsr, nthreads=1, events_per_file=100000):
         self.job_descriptions = job_descriptions
         self.chunk_lock = threading.Lock()
         self.loaded_lock = threading.Lock()
