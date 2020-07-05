@@ -1202,7 +1202,7 @@ def run_analysis(
     job_descriptions,
     parameter_sets,
     analysis_corrections,
-        numev_per_chunk=100000):
+        numev_per_chunk=1000000):
 
     #Keep track of number of events
     nev_total = 0
