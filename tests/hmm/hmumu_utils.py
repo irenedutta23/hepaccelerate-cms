@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [23899592]
+debug_event_ids = [201849818]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -607,7 +607,7 @@ def analyze_data(
                 muons.numevents(), softjets, leading_muon, subleading_muon,
                 leading_jet, subleading_jet, jets_passing_id, parameters["softjet_pt5"],
                 parameters["softjet_evt_dr2"], use_cuda)
-
+            
             #compute Nsoft jet variable 2 by removing event footprints
             n_sel_softjet2, n_sel_HTsoftjet2 = nsoftjets(True,
                 scalars["SoftActivityJetNjets2"], scalars["SoftActivityJetHT2"],
@@ -621,6 +621,7 @@ def analyze_data(
                 #(ret_mu['selected_events']) & (ret_jet["num_jets"] >= 2) & (ret_jet["dijet_inv_mass"]>300) &  
                 (leading_jet["pt"] > parameters["jet_pt_leading"][dataset_era])
             )
+            
             if is_mc and 'dy_m105_160' in dataset_name:
                 leading_jets_matched_to_genJet = leading_jet["genJetIdx"]>=0
                 subleading_jets_matched_to_genJet = subleading_jet["genJetIdx"]>=0
@@ -674,7 +675,7 @@ def analyze_data(
                 weights_selected,
                 use_cuda
             )
-
+            
             #Compute the DNN inputs, the DNN output, fill the DNN input and output variable histograms
             dnn_prediction = None
             dnn_vars, dnn_prediction, dnnPisa_predictions, dnnPisaComb_pred = compute_fill_dnn(analysis_corrections.hrelresolution,
@@ -707,7 +708,6 @@ def analyze_data(
                 parameters["cat5_abs_jj_deta_cut"]
             )
             scalars["category"] = category
-                    
             #Assign the final analysis discriminator based on category
             #scalars["final_discriminator"] = NUMPY_LIB.zeros_like(higgs_inv_mass)
             if not (dnn_prediction is None):
@@ -735,6 +735,7 @@ def analyze_data(
                     #    dnn_vars["puid_weight"] = weights_individual['jet_puid']['nominal'][dnn_presel]
                     dnn_vars["j1_partonFlavour"] = leading_jet["partonFlavour"][dnn_presel]
                     dnn_vars["j2_partonFlavour"] = subleading_jet["partonFlavour"][dnn_presel]
+                
                 dnn_vars["j1_jetId"] = leading_jet["jetId"][dnn_presel]
                 dnn_vars["j1_puId"] = leading_jet["puId"][dnn_presel]
                 dnn_vars["j2_jetId"] =subleading_jet["jetId"][dnn_presel]
@@ -1526,7 +1527,6 @@ def get_selected_muons(
     # To save time apply a mass window cut. get the invariant mass of the dimuon system and compute mass windows
     #higgs_inv_mass, _ = compute_inv_mass(muons, final_event_sel, final_muon_sel, use_cuda)
     #final_event_sel = final_event_sel & (higgs_inv_mass > 100.0)
-    
     if debug:
         for evtid in debug_event_ids:
             idx = np.where(scalars["event"] == evtid)[0][0]
@@ -1826,7 +1826,6 @@ def get_selected_jets(
     criteria and that are not dR-matched to muons.
     """
     selected_jets = (jets.pt > jet_pt_cut_subleading)
- 
     #produce a mask that selects the first two selected jets 
     first_two_jets = NUMPY_LIB.zeros_like(selected_jets)
 
@@ -1845,8 +1844,10 @@ def get_selected_jets(
             print("selected subleading jet index: ",out_jet_index1[idx])
  
     targets = NUMPY_LIB.ones_like(mask_events, dtype=NUMPY_LIB.int32) 
-    ha.set_in_offsets(jets.offsets, first_two_jets, out_jet_index0, targets, mask_events, selected_jets)
-    ha.set_in_offsets(jets.offsets, first_two_jets, out_jet_index1, targets, mask_events, selected_jets)
+    out_leading_jet = NUMPY_LIB.zeros_like(mask_events, dtype=NUMPY_LIB.int32)
+    out_subleading_jet = NUMPY_LIB.ones_like(mask_events, dtype=NUMPY_LIB.int32)
+    ha.set_in_offsets(jets.offsets, first_two_jets, out_leading_jet, targets, mask_events, selected_jets)
+    ha.set_in_offsets(jets.offsets, first_two_jets, out_subleading_jet, targets, mask_events, selected_jets)
     jets.attrs_data["selected"] = selected_jets
     jets.attrs_data["first_two"] = first_two_jets
 
@@ -1926,9 +1927,9 @@ def compute_dnnPisaComb_cuda(dnnPisaComb_pred, dnnPisa_preds, event_array, n_mas
         for imass in range(n_mass):
             dnnPisaComb_pred[imass][i] = dnnPisa_preds[n_mass*(event_array[i]%4)+imass][i]
 
-@numba.njit(parallel=True)
+#@numba.njit(parallel=True)
 def mhfordnn(fixedmH, dimu, movem):
-    for i in numba.prange(len(dimu)):
+    for i in range(len(dimu)):
         if (dimu[i]>115.03) & (dimu[i]<135.03):
             fixedmH[i] = dimu[i] + movem[i]
         else:
@@ -2756,7 +2757,11 @@ def to_cartesian(arrs):
     return {"px": px, "py": py, "pz": pz, "e": e}
 
 def rapidity(e, pz):
-    return 0.5*NUMPY_LIB.log((e + pz) / (e - pz))
+    rap = NUMPY_LIB.zeros_like(e,dtype=NUMPY_LIB.float32)
+    for k in numba.prange(len(pz)):
+        if (e[k]-pz[k])!=0.:
+            rap[k]= 0.5*NUMPY_LIB.log((e[k] + pz[k]) / (e[k] - pz[k]))
+    return rap
 
 """
 Given a a dictionary of arrays of cartesian coordinates (px, py, pz, e),
@@ -2902,7 +2907,6 @@ def dnn_variables(hrelresolution, miscvariables, leading_muon, subleading_muon, 
     dr_mmj = NUMPY_LIB.vstack(dr_mmjs)
     dRmin_mmj = NUMPY_LIB.min(dr_mmj, axis=0) 
     dRmax_mmj = NUMPY_LIB.max(dr_mmj, axis=0)
-   
     #Zeppenfeld variable
     Zep = (mm_sph["eta"] - 0.5*(leading_jet["eta"] + subleading_jet["eta"]))
     Zep_rapidity = (mm_sph["rapidity"] - 0.5*(leading_jet["rapidity"] + subleading_jet["rapidity"]))/(leading_jet["rapidity"]-subleading_jet["rapidity"])
@@ -3054,7 +3058,6 @@ def compute_fill_dnn(
     is_mc):
 
     nev_dnn_presel = NUMPY_LIB.sum(dnn_presel)
-
     #for some reason, on the cuda backend, the sum does not return a simple number
     if use_cuda:
         nev_dnn_presel = int(NUMPY_LIB.asnumpy(nev_dnn_presel).flatten()[0])
