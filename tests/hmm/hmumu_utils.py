@@ -1512,8 +1512,9 @@ def get_selected_muons(
     )
 
     #Find two opposite sign muons among the muons passing ID and subleading pt
-    muons_passing_os = ha.select_opposite_sign(
-        muons.offsets, muons.charge, muons_passing_id & passes_subleading_pt)
+    muons_passing_os = NUMPY_LIB.zeros_like(muons_passing_id, dtype = NUMPY_LIB.bool)
+    select_opposite_sign_kernel2(
+        muons.charge, muons.offsets, muons_passing_id & passes_subleading_pt, muons_passing_os)
     events_passes_os = ha.sum_in_offsets(
         muons.offsets, muons_passing_os, mask_events,
         muons.masks["all"], NUMPY_LIB.int32) == 2
@@ -1844,10 +1845,11 @@ def get_selected_jets(
             print("selected subleading jet index: ",out_jet_index1[idx])
  
     targets = NUMPY_LIB.ones_like(mask_events, dtype=NUMPY_LIB.int32) 
-    out_leading_jet = NUMPY_LIB.zeros_like(mask_events, dtype=NUMPY_LIB.int32)
-    out_subleading_jet = NUMPY_LIB.ones_like(mask_events, dtype=NUMPY_LIB.int32)
-    ha.set_in_offsets(jets.offsets, first_two_jets, out_leading_jet, targets, mask_events, selected_jets)
-    ha.set_in_offsets(jets.offsets, first_two_jets, out_subleading_jet, targets, mask_events, selected_jets)
+    for iev in numba.prange(len(jets.offsets)-1):
+        for j in range(jets.offsets[iev],jets.offsets[iev+1]):
+            if (j-jets.offsets[iev])==out_jet_index0[iev] or (j-jets.offsets[iev])==out_jet_index1[iev]:
+                first_two_jets[j] = 1
+    
     jets.attrs_data["selected"] = selected_jets
     jets.attrs_data["first_two"] = first_two_jets
 
@@ -2268,6 +2270,36 @@ def compute_eff_product_cpu(offsets, jet_pt, subjet_pt, jet_pt_mask, jets_mask_p
             else:
                 p_tot *= 1.0 - jets_eff[ij]
         out_proba[iev] = p_tot
+
+@numba.njit(parallel=True, fastmath=True)
+def select_opposite_sign_kernel2(
+    charges_content, charges_offsets, content_mask_in, content_mask_out
+):
+    assert len(charges_content) == len(content_mask_in)
+    assert len(charges_content) == len(content_mask_out)
+    for iev in numba.prange(charges_offsets.shape[0] - 1):
+        start = np.uint64(charges_offsets[iev])
+        end = np.uint64(charges_offsets[iev + 1])
+        ch1 = np.float32(0.0)
+        ch2 = np.float32(0.0)
+        pair_found = False
+        # loop over objects (e.g. muons)
+        for iobj in range(start, end):
+            if not content_mask_in[iobj]:
+                continue
+            ch1 = charges_content[iobj]
+            for jobj in range(start+1, end):
+                if not content_mask_in[jobj]:
+                    continue
+                ch2 = charges_content[jobj]
+                if ch1 == -ch2:
+                    pair_found = True
+                    content_mask_out[iobj] = True
+                    content_mask_out[jobj] = True
+                    break
+            if pair_found:
+                break
+    return
 
 @cuda.jit
 def compute_eff_product_cudakernel(offsets, jet_pt, subjet_pt, jet_pt_mask, jets_mask_passes_id, jets_eff, out_proba):
