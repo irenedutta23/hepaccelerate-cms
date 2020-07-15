@@ -235,8 +235,8 @@ def plot_variations(args):
         sum_nom_up=np.sum(h_nom_up.contents)
         sum_nom_down=np.sum(h_nom_down.contents)
         for k in range(len(h_nom_up.contents)):
-            h_nom_up[k] = h_nom_up[k]*np.sum(hnom.contents)/np.sum(h_nom_up.contents)
-            h_nom_down[k] = h_nom_down[k]*np.sum(hnom.contents)/np.sum(h_nom_down.contents)
+            h_nom_up.contents[k] = h_nom_up.contents[k]*np.sum(hnom.contents)/np.sum(h_nom_up.contents)
+            h_nom_down.contents[k] = h_nom_down.contents[k]*np.sum(hnom.contents)/np.sum(h_nom_down.contents)
         plot_hist_step(ax, h_nom_up.edges, h_nom_up.contents,
                 np.sqrt(h_nom_up.contents_w2),
                        kwargs_step={"label": "up "+"({0:.3E})".format(np.sum(h_nom_up.contents))},
@@ -258,8 +258,8 @@ def plot_variations(args):
         sum_nom_up=np.sum(h_nom_up.contents)
         sum_nom_down=np.sum(h_nom_down.contents)
         for k in range(len(h_nom_up.contents)):
-            h_nom_up[k] = h_nom_up[k]*np.sum(hnom.contents)/np.sum(h_nom_up.contents)
-            h_nom_down[k] = h_nom_down[k]*np.sum(hnom.contents)/np.sum(h_nom_down.contents)
+            h_nom_up.contents[k] = h_nom_up.contents[k]*np.sum(hnom.contents)/np.sum(h_nom_up.contents)
+            h_nom_down.contents[k] = h_nom_down.contents[k]*np.sum(hnom.contents)/np.sum(h_nom_down.contents)
         plot_hist_step(ax, h_nom_up.edges, h_nom_up.contents,
                 np.sqrt(h_nom_up.contents_w2),
                        kwargs_step={"label": "up "+"({0:.3E})".format(np.sum(h_nom_up.contents))},
