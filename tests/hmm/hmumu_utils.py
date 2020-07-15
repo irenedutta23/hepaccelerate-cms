@@ -1929,7 +1929,7 @@ def compute_dnnPisaComb_cuda(dnnPisaComb_pred, dnnPisa_preds, event_array, n_mas
 @numba.njit(parallel=True)
 def mhfordnn(fixedmH, dimu, movem):
     for i in numba.prange(len(dimu)):
-        if (dimu[i]>115) & (dimu[i]<135):
+        if (dimu[i]>115.03) & (dimu[i]<135.03):
             fixedmH[i] = dimu[i] + movem[i]
         else:
             fixedmH[i] = 125.0
