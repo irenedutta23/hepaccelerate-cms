@@ -300,7 +300,7 @@ def plot_variations(args):
                 np.sqrt(h_pdf_down.contents_w2),
                        kwargs_step={"label": "down "+"({0:.3E})".format(np.sum(h_pdf_down.contents))},
             )
-    if('DYshape_DNN' in unc and 'dy_m105_160_2j' in mc_samp and 'dnnPisa_pred_atanh' in var and 'z_peak' not in var):
+    if('DYshape_DNN' in unc and 'dy' in mc_samp and '2j' in mc_samp and 'dnnPisa_pred_atanh' in var and 'z_peak' not in var):
         h_dyShape_up = copy.deepcopy(hnom)
         h_dyShape_down = copy.deepcopy(hnom)
         if 'h_peak' in var:
