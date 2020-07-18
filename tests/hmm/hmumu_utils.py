@@ -3037,7 +3037,7 @@ def dnn_variables(hrelresolution, miscvariables, leading_muon, subleading_muon, 
         movem = NUMPY_LIB.full(nw, 125.0-imass, dtype=NUMPY_LIB.float32)
         mhfordnn(fixm, mm_sph["mass"],movem)
         ret.update( {"Higgs_m_"+str(imass): fixm} )
-        ret.update( {"Higgs_mReso_"+str(imass): fixm*Higgs_mrelreso,} )
+        ret.update( {"Higgs_mReso_"+str(imass): mm_sph["mass"]*Higgs_mrelreso,} )
     if debug:
         for k in ret.keys():
             msk = NUMPY_LIB.isnan(ret[k])
