@@ -308,8 +308,8 @@ def plot_variations(args):
         elif 'h_sideband' in var:
             massbin = 'h_sideband'
         for r in range(len(dymodel_DNN_reshape[str(datataking_year)][massbin])):
-            h_dyShape_up.contents[r] = h_dyShape_up.contents[r]*dymodel_DNN_reshape[str(datataking_year)][massbin][r]
-            h_dyShape_down.contents[r] = 2*h_dyShape_down.contents[r] - h_dyShape_up.contents[r]
+            h_dyShape_up.contents[r] = 0.1*(h_dyShape_up.contents[r]*dymodel_DNN_reshape[str(datataking_year)][massbin][r])
+            h_dyShape_down.contents[r] = 0.1*(h_dyShape_down.contents[r]/(dymodel_DNN_reshape[str(datataking_year)][massbin][r])**(0.2))
 
         plot_hist_step(ax, h_dyShape_up.edges, h_dyShape_up.contents,
                 np.sqrt(h_dyShape_up.contents_w2),
@@ -630,8 +630,8 @@ def create_variated_histos(weight_xs, proc,
         elif 'h_sideband' in histname:
             massbin = 'h_sideband'
         for r in range(len(dymodel_DNN_reshape[era][massbin])):
-            h_dyShape_up.contents[r] = h_dyShape_up.contents[r]*dymodel_DNN_reshape[era][massbin][r]
-            h_dyShape_down.contents[r] = 2*h_dyShape_down.contents[r] - h_dyShape_up.contents[r]
+            h_dyShape_up.contents[r] = 0.1*(h_dyShape_up.contents[r]*dymodel_DNN_reshape[era][massbin][r])
+            h_dyShape_down.contents[r] = 0.1*(h_dyShape_down.contents[r]/(dymodel_DNN_reshape[era][massbin][r])**(0.2))
         ret['DYshape_DNNUp']=h_dyShape_up
         ret['DYshape_DNNDown']=h_dyShape_down
 
@@ -1366,10 +1366,10 @@ if __name__ == "__main__":
                                 plot_args_shape_syst += [(
                                     histos, hdata, mc_samp, analysis,
                                     var, "nominal", weight_xs, int_lumi, outdir, era, unc)]
-        rets = list(pool.map(make_pdf_plot, plot_args))
+        #rets = list(pool.map(make_pdf_plot, plot_args))
         #rets = list(pool.map(make_pdf_plot, plot_args_weights_off))
         rets = list(pool.map(create_datacard_combine_wrap, datacard_args))
-        rets = list(pool.map(plot_variations, plot_args_shape_syst))
+        #rets = list(pool.map(plot_variations, plot_args_shape_syst))
 
         #for args, retval in zip(datacard_args, rets):
         #    res, hd, mc_samples, analysis, var, weight, weight_xs, int_lumi, outdir, datataking_year = args
