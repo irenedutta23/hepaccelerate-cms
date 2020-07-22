@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [237818703]
+debug_event_ids = [492058759]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -1445,7 +1445,7 @@ def get_selected_muons(
         muons.phi = mu_phi
         muons.mass = mu_mass
         muons.pfRelIso04_all = mu_iso
-
+    
     passes_iso = muons.pfRelIso04_all < mu_iso_cut
     passes_iso_trig_matched = muons.pfRelIso04_all < mu_iso_trig_matched_cut
 
@@ -1594,11 +1594,11 @@ def correct_muon_with_fsr(
                 out_phi = np.arctan2(py_total, px_total)
                 out_m = np.sqrt(e_total**2 - px_total**2 - py_total**2 - pz_total**2)
                 
-                update_iso = dr<0.4
+                #update_iso = dr<0.4
 
                 #reference: https://gitlab.cern.ch/uhh-cmssw/fsr-photon-recovery/tree/master
-                if update_iso:
-                    muons_iso[imu] = (muons_iso[imu]*muons_pt[imu] - fsr_pt[ifsr])/out_pt
+                #if update_iso:
+                muons_iso[imu] = (muons_iso[imu]*muons_pt[imu] - fsr_pt[ifsr])/out_pt
 
                 muons_pt[imu] = out_pt
                 muons_eta[imu] = out_eta
