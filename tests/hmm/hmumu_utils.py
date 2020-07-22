@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [201849818]
+debug_event_ids = [237818703]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -1784,21 +1784,11 @@ def get_selected_jets_id(
 
     leading_muon_offsets = NUMPY_LIB.arange(0,len(leading_muon["pt"])+1)
     leading_muon_mask = NUMPY_LIB.ones_like(leading_muon["pt"])
-    jets_pass_dr_mu0 = ha.mask_deltar_first(
-        {"eta": jets.eta, "phi": jets.phi, "offsets": jets.offsets},
-        selected_jets,
-        {"eta": leading_muon["eta"], "phi": leading_muon["phi"], "offsets": leading_muon_offsets},
-        leading_muon_mask, jet_dr_cut)
-    jets_pass_dr_mu1 = ha.mask_deltar_first(
-        {"eta": jets.eta, "phi": jets.phi, "offsets": jets.offsets},
-        selected_jets,
-        {"eta": subleading_muon["eta"], "phi": subleading_muon["phi"], "offsets": leading_muon_offsets},
-        leading_muon_mask, jet_dr_cut)
-
+    jets_pass_dr_mu0 = jets.muonIdx1 == -1
+    jets_pass_dr_mu1 = jets.muonIdx2 == -1
     jets_pass_dr = (jets_pass_dr_mu0 & jets_pass_dr_mu1)
     jets.masks["pass_dr"] = jets_pass_dr
     selected_jets = selected_jets & jets_pass_dr
-   
     '''
     if debug:
         for evtid in debug_event_ids:
@@ -3729,6 +3719,8 @@ def create_datastructure(dataset_name, is_mc, dataset_era, do_fsr=False):
             ("Jet_btagDeepB", "float32"),
             ("Jet_qgl", "float32"),
             ("Jet_jetId", "int32"),
+            ("Jet_muonIdx1","int32"),
+            ("Jet_muonIdx2","int32"),
             ("Jet_puId", "int32"),
             ("Jet_area", "float32"),
             ("Jet_rawFactor", "float32"),
