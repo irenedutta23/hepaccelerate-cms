@@ -455,7 +455,7 @@ btag_unc_rename = ["CMS_btag_jes","CMS_btag_Lf","CMS_btag_Cferr1","CMS_btag_Cfer
 other_syst_rename = ["CMS_pileup_vbf", "CMS_prefiring"]
 rename_syst= jec_unc_rename + jer_unc_rename+ btag_unc_rename + other_syst_rename
 org_syst = jec_unc + jer_unc+ btag_unc + ["puWeight", "L1PreFiringWeight"]
-decorrelate_syst = ["trigger", "id", "iso", "DYLHERen","EWZLHERen","DYLHEFac","EWZLHEFac","EWKLHEScaleWeight_norm", "EWZ105160PS", "VBFHPS","DYshape_DNN","Topxsec","VVxsec"] 
+decorrelate_syst = ["trigger", "id", "iso", "EWKLHEScaleWeight_norm", "EWZ105160PS","Topxsec","VVxsec"] 
 
 py_samp = ["ggh_amcPS_pythia_125", "dy_m105_160_01j", "dy_m105_160_2j","top", "vv", "vh_125","tth_125"]
 herwig_samp = ["ewk_lljj_mll105_160_ptJ_herwig"]
@@ -600,32 +600,33 @@ dymodel_DNN_reshape = {
                        0.7673167661),
     },
     "2018":{
-        "h_peak": (0.9956930566,
-                   1.013170633,
-                   1.017263022,
-                   1.006486804,
-                   0.9274981065,
-                   1.003015988,
-                   0.9276172474,
-                   0.9777035227,
-                   0.8990271855,
-                   1.143007413,
-                   1.184290552,
-                   1.0,#ratio of very small numbers
-                   1.0),#ratio of very small numbers
-        "h_sideband":(1.01890708,
-                      1.053265004,
-                      0.9933277914,
-                      0.9596205718,
-                      0.9395177881,
-                      0.957342672,
-                      0.9137541642,
-                      0.8345299283,
-                      0.9235381299,
-                      0.7560120989,
-                      0.9660648539,
-                      0.9875025133,
-                      1.0),#ratio of very small numbers
+        "h_peak": (0.9951012233,
+                   1.016147681,
+                   1.009796371,
+                   1.017391335,
+                   0.8998916965,
+                   1.003134189,
+                   0.9382245025,
+                   0.9398089067,
+                   0.9238255108,
+                   1.354468107,
+                   1.302041425,
+                   1.383144437,
+                   1.94),
+        "h_sideband":(
+            1.028935383,
+            1.056019234,
+            0.9842308641,
+            0.9530115489,
+            0.9284349217,
+            0.9654664347,
+            0.9136553811,
+            0.8263961795,
+            0.9406409542,
+            0.7948182252,
+            0.9696701881,
+            0.9762267725,
+            1.578297804),
     }
 }
 lhe_pdf_variations ={

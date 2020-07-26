@@ -308,9 +308,18 @@ def plot_variations(args):
         elif 'h_sideband' in var:
             massbin = 'h_sideband'
         for r in range(len(dymodel_DNN_reshape[str(datataking_year)][massbin])):
-            h_dyShape_up.contents[r] = 0.1*(h_dyShape_up.contents[r]*dymodel_DNN_reshape[str(datataking_year)][massbin][r])
-            h_dyShape_down.contents[r] = 0.1*(h_dyShape_down.contents[r]/(dymodel_DNN_reshape[str(datataking_year)][massbin][r])**(0.2))
-
+            h_dyShape_up.contents[r] = 1.1*hnom.contents[r] + 0.1*(hnom.contents[r]*dymodel_DNN_reshape[str(datataking_year)][massbin][r])
+            h_dyShape_down.contents[r] = 0.9*hnom.contents[r] - 0.1*(hnom.contents[r]/(dymodel_DNN_reshape[str(datataking_year)][massbin][r])**(0.2))
+            #h_dyShape_up.contents[r] = (hnom.contents[r]*dymodel_DNN_reshape[str(datataking_year)][massbin][r])
+            #h_dyShape_down.contents[r] = (hnom.contents[r]/(dymodel_DNN_reshape[str(datataking_year)][massbin][r])**(0.2))
+        #remove the normalization aspect
+        
+        sum_dyShape_up=np.sum(h_dyShape_up.contents)
+        sum_dyShape_down=np.sum(h_dyShape_down.contents)
+        for k in range(len(h_dyShape_up.contents)):
+            if(sum_dyShape_up!=0.0) : h_dyShape_up.contents[k]=h_dyShape_up.contents[k]*np.sum(hnom.contents)/sum_dyShape_up
+            if(sum_dyShape_down!=0.0) : h_dyShape_down.contents[k]=h_dyShape_down.contents[k]*np.sum(hnom.contents)/sum_dyShape_down
+        
         plot_hist_step(ax, h_dyShape_up.edges, h_dyShape_up.contents,
                 np.sqrt(h_dyShape_up.contents_w2),
                        kwargs_step={"label": "up "+"({0:.3E})".format(np.sum(h_dyShape_up.contents))},
@@ -630,8 +639,17 @@ def create_variated_histos(weight_xs, proc,
         elif 'h_sideband' in histname:
             massbin = 'h_sideband'
         for r in range(len(dymodel_DNN_reshape[era][massbin])):
-            h_dyShape_up.contents[r] = 0.1*(h_dyShape_up.contents[r]*dymodel_DNN_reshape[era][massbin][r])
-            h_dyShape_down.contents[r] = 0.1*(h_dyShape_down.contents[r]/(dymodel_DNN_reshape[era][massbin][r])**(0.2))
+            h_dyShape_up.contents[r] = 1.1*hbase.contents[r] + 0.1*(hbase.contents[r]*dymodel_DNN_reshape[era][massbin][r])
+            h_dyShape_down.contents[r] = 0.9*hbase.contents[r] - 0.1*(hbase.contents[r]/(dymodel_DNN_reshape[era][massbin][r])**(0.2))
+            #h_dyShape_up.contents[r] = (hbase.contents[r]*dymodel_DNN_reshape[era][massbin][r])
+            #h_dyShape_down.contents[r] = (hbase.contents[r]/(dymodel_DNN_reshape[era][massbin][r])**(0.2))
+        
+        sum_dyShape_up=np.sum(h_dyShape_up.contents)
+        sum_dyShape_down=np.sum(h_dyShape_down.contents)
+        for k in range(len(h_dyShape_up.contents)):
+            if(sum_dyShape_up!=0.0): h_dyShape_up.contents[k]=h_dyShape_up.contents[k]*np.sum(hbase.contents)/sum_dyShape_up
+            if(sum_dyShape_down!=0.0): h_dyShape_down.contents[k]=h_dyShape_down.contents[k]*np.sum(hbase.contents)/sum_dyShape_down
+        
         ret['DYshape_DNNUp']=h_dyShape_up
         ret['DYshape_DNNDown']=h_dyShape_down
 
