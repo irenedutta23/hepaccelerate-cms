@@ -31,7 +31,7 @@ NUMPY_LIB = None
 debug = False
 #debug = True
 #event IDs for which to print out detailed information
-debug_event_ids = [1471942832]
+debug_event_ids = [147564817]
 #Run additional checks on the analyzed data to ensure consistency - for debugging
 doverify = False
 
@@ -2157,9 +2157,10 @@ def get_factorized_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     mask_pt_bounds = NUMPY_LIB.logical_and(NUMPY_LIB.logical_not(pt_eta_mask), (jets.pt > 1000. ))
     # Code help from https://github.com/chreissel/hepaccelerate/blob/mass_fit/lib_analysis.py#L118
     # Code help from https://gitlab.cern.ch/uhh-cmssw/CAST/blob/master/BTaggingWeight/plugins/BTaggingReShapeProducer.cc
+    mask_correct_bound = NUMPY_LIB.logical_and(NUMPY_LIB.logical_not(pt_eta_mask),(jets.pt < 1000. ))
+    #p_jetWt = evaluator[tag_name].eval('central', jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jet_pt, jets.btagDeepB,True)
+    p_jetWt = evaluator[tag_name].eval('central', jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jets.pt, jets.btagDeepB)
     
-    p_jetWt = evaluator[tag_name].eval('central', jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jet_pt, jets.btagDeepB,True)
-        
     #print("p_JetWt before", p_jetWt, p_jetWt.mean(), p_jetWt.std())
     p_jetWt[pt_eta_mask] = 1.
     #print("p_JetWt after", p_jetWt, p_jetWt.mean(), p_jetWt.std())
@@ -2191,20 +2192,31 @@ def get_factorized_btag_weights_shape(jets, evaluator, era, scalars, pt_cut):
     for i in range(0,9):
         for sdir in ['up','down']:
             tsys_name = sdir + '_' + tag_sys[i]
-            SF_btag = evaluator[tag_name].eval(tsys_name, jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jet_pt, jets.btagDeepB, True)
+            #SF_btag = evaluator[tag_name].eval(tsys_name, jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jet_pt, jets.btagDeepB, True)
+            SF_btag = evaluator[tag_name].eval(tsys_name, jets.hadronFlavour, NUMPY_LIB.abs(jets.eta), jets.pt, jets.btagDeepB)
+            if(i==0):
+                SF_btag[(jets.hadronFlavour)==4] = 1.
+            elif(i>0 and i<4):
+                SF_btag[(jets.hadronFlavour)!=5] = 1.
+            elif(i>3 and i<6):
+                SF_btag[(jets.hadronFlavour)!=4] = 1.
+            elif(i>5):
+                SF_btag[(jets.hadronFlavour)!=0] = 1.
             if sdir == 'up':
                 p_jetWt_up[i]*=SF_btag
                 p_jetWt_up[i][pt_eta_mask] = 1.
                 #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
                 # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
-                p_jetWt_up[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_up[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
+                #p_jetWt_up[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*NUMPY_LIB.abs(p_jetWt_up[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
+                #p_jetWt_up[i][mask_correct_bound] = p_jetWt[mask_correct_bound]+NUMPY_LIB.abs(p_jetWt_up[i][mask_correct_bound]-p_jetWt[mask_correct_bound])
                 compute_event_btag_weight_shape(jets.offsets, p_jetWt_up[i], eventweight_btag_up[i])
             else:
                 p_jetWt_down[i]*=SF_btag
                 p_jetWt_down[i][pt_eta_mask] = 1.
                 #For jets with pt > 1000., evaluate with pt =1000. (done automatically) and inflate to double the systematic
                 # based on https://github.com/cms-sw/cmssw/blob/master/CondTools/BTau/src/BTagCalibrationReader.cc#L170
-                p_jetWt_down[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]+2*(p_jetWt_down[i][mask_pt_bounds]-p_jetWt[mask_pt_bounds])
+                #p_jetWt_down[i][mask_pt_bounds] = p_jetWt[mask_pt_bounds]-2*NUMPY_LIB.abs(-p_jetWt_down[i][mask_pt_bounds]+p_jetWt[mask_pt_bounds])
+                #p_jetWt_down[i][mask_correct_bound] = p_jetWt[mask_correct_bound]-NUMPY_LIB.abs(-p_jetWt_down[i][mask_correct_bound]+p_jetWt[mask_correct_bound])
                 compute_event_btag_weight_shape(jets.offsets, p_jetWt_down[i], eventweight_btag_down[i])
                     
         if debug:
