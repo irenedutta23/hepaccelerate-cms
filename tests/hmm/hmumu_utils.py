@@ -186,6 +186,8 @@ def analyze_data(
     muons.attrs_data["nanoAOD_phi"] = muons.phi
     muons.attrs_data["nanoAOD_mass"] = muons.mass
 
+    muon_pt_err_up = NUMPY_LIB.copy(muons.pt)
+    muon_pt_err_down = NUMPY_LIB.copy(muons.pt)
     #Apply Rochester corrections to leading and subleading muon momenta
     if parameters["do_rochester_corrections"]:
         if debug:
@@ -193,10 +195,10 @@ def analyze_data(
         do_rochester_corrections(
             is_mc,
             analysis_corrections.rochester_corrections[dataset_era],
-            muons)
+            muons, muon_pt_err_up, muon_pt_err_down )
         if debug:
             print("After applying Rochester corrections muons.pt={0:.2f} +- {1:.2f}".format(muons.pt.mean(), muons.pt.std()))
-        
+
     #get the two leading muons after applying all muon selection
     ret_mu = get_selected_muons(
         scalars,
@@ -304,7 +306,7 @@ def analyze_data(
     if parameters["do_lepton_sf"] and is_mc:
         lepton_sf_values = compute_lepton_sf(leading_muon, subleading_muon,
             analysis_corrections.lepsf_iso[dataset_era], analysis_corrections.lepsf_id[dataset_era], analysis_corrections.lepeff_trig_data[dataset_era],
-            analysis_corrections.lepeff_trig_mc[dataset_era], use_cuda, dataset_era, NUMPY_LIB, debug)
+            analysis_corrections.lepeff_trig_mc[dataset_era],  use_cuda, dataset_era, NUMPY_LIB, debug)
         weights_individual["trigger"] = {
             "nominal": lepton_sf_values["trigger"],
             "up": lepton_sf_values["trigger__up"], 
@@ -2619,14 +2621,17 @@ Applies Rochester corrections on leading and subleading muons, returns the corre
 def do_rochester_corrections(
     is_mc,
     rochester_corrections,
-    muons):
+        muons, muon_pt_err_up, muon_pt_err_down):
 
-    qterm = rochester_correction_muon_qterm(
+    qterm, errterm = rochester_correction_muon_qterm(
         is_mc, rochester_corrections, muons)
     
     muon_pt_corr = muons.pt * qterm
+    muon_pt_err = muons.pt * errterm
+    
     muons.pt[:] = muon_pt_corr[:]
-
+    muon_pt_err_up = muon_pt_corr + muon_pt_err
+    muon_pt_err_down = muon_pt_corr - muon_pt_err
     return
 
 """
@@ -2652,6 +2657,15 @@ def rochester_correction_muon_qterm(
             NUMPY_LIB.asnumpy(muons.nTrackerLayers),
             NUMPY_LIB.asnumpy(rnd)
         )
+        errterm = rochester_corrections.compute_kSpreadMCerror_or_kSmearMCerror(
+            NUMPY_LIB.asnumpy(muons.pt),
+            NUMPY_LIB.asnumpy(muons.eta),
+            NUMPY_LIB.asnumpy(muons.phi),
+            NUMPY_LIB.asnumpy(muons.charge),
+            NUMPY_LIB.asnumpy(muons.genpt),
+            NUMPY_LIB.asnumpy(muons.nTrackerLayers),
+            NUMPY_LIB.asnumpy(rnd)
+        )
     else:
         qterm = rochester_corrections.compute_kScaleDT(
             NUMPY_LIB.asnumpy(muons.pt),
@@ -2659,8 +2673,14 @@ def rochester_correction_muon_qterm(
             NUMPY_LIB.asnumpy(muons.phi),
             NUMPY_LIB.asnumpy(muons.charge),
         )
+        errterm = rochester_corrections.compute_kScaleDTerror(
+            NUMPY_LIB.asnumpy(muons.pt),
+            NUMPY_LIB.asnumpy(muons.eta),
+            NUMPY_LIB.asnumpy(muons.phi),
+            NUMPY_LIB.asnumpy(muons.charge),
+        )
 
-    return NUMPY_LIB.array(qterm)
+    return NUMPY_LIB.array(qterm),NUMPY_LIB.array(errterm)
 
 @numba.njit('float32[:], float32[:], float32[:]', parallel=True, fastmath=True)
 def deltaphi_cpu(phi1, phi2, out_dphi):
@@ -3472,7 +3492,7 @@ def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepeff
     effs_trig_data_down = []
     effs_trig_mc_up = []
     effs_trig_mc_down = []
-
+    
     #compute weight for both leading and subleading muon
     for mu in [leading_muon, subleading_muon]:
         #lepton SF computed on CPU 
@@ -3527,6 +3547,7 @@ def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepeff
         effs_trig_mc_down += [eff_trig_mc_down]
     
     #multiply all ID, iso, trigger weights for leading and subleading muons
+    # nominal rochester correction factor already applied to muon pt
     sf_id = multiply_all(sfs_id)
     sf_iso = multiply_all(sfs_iso)
     sf_trig = multiply_all_trig(effs_trig_data)/multiply_all_trig(effs_trig_mc)
@@ -3551,7 +3572,7 @@ def compute_lepton_sf(leading_muon, subleading_muon, lepsf_iso, lepsf_id, lepeff
         "iso__up": sf_iso_up,
         "iso__down": sf_iso_down,
         "trigger__up": sf_trig_up,
-        "trigger__down": sf_trig_down
+        "trigger__down": sf_trig_down,
     }
 
     if use_cuda:
